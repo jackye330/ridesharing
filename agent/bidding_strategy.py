@@ -2,8 +2,8 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/27
-from network.transport_network.location import OrderLocation
-from network.transport_network.graph import NetworkGraph
+from network.location import OrderLocation
+from network.graph import Graph
 from typing import List
 from setting import AVERAGE_SPEED
 
@@ -21,7 +21,7 @@ class SingleOrderBid:
 class BiddingStrategy:
     __slots__ = []
 
-    def get_bids(self, vehicle, orders, network: NetworkGraph, current_time: int):
+    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
         raise NotImplementedError
 
 
@@ -32,7 +32,7 @@ class AdditionalValueStrategy(BiddingStrategy):  # 增加量的投标策略 例�
         self.optimizer = optimizer
         self.route_planning_method = route_planning_method
 
-    def get_bids(self, vehicle, orders, network: NetworkGraph, current_time: int):
+    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
         compute_value_method = self.optimizer.compute_value_method
         original_value = compute_value_method(vehicle, vehicle.route_plan, current_time, network)
         vehicle_bids = {}
@@ -45,7 +45,7 @@ class AdditionalValueStrategy(BiddingStrategy):  # 增加量的投标策略 例�
 
 class PickUpDistanceStrategy(BiddingStrategy):  # 采用接送距离作为投标距离
 
-    def get_bids(self, vehicle, orders, network: NetworkGraph, current_time: int):
+    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
         from agent.route_planning import compute_cost
         original_cost = compute_cost(vehicle, vehicle.route_plan, current_time, network)
         vehicle_bids = {}

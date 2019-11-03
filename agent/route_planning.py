@@ -8,10 +8,10 @@ from typing import List
 from setting import AVERAGE_SPEED
 from agent.order import Order
 from agent.vehicle import Vehicle
-from network.transport_network.location import OrderLocation
-from network.transport_network.location import PickLocation
-from network.transport_network.location import DropLocation
-from network.transport_network.graph import NetworkGraph
+from network.location import OrderLocation
+from network.location import PickLocation
+from network.location import DropLocation
+from network.graph import Graph
 
 __all__ = [
     "compute_profit", "compute_cost",
@@ -36,7 +36,7 @@ class RoutePlanInfo:
         self.is_feasible = is_feasible
 
 
-def get_route_plan_info(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph)\
+def get_route_plan_info(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph)\
         -> RoutePlanInfo:
     """
     更具当前车的信息，求解一个新的路径规划的一些信息（每一个订单的绕路比，行驶长度，可行性）
@@ -57,20 +57,24 @@ def get_route_plan_info(vehicle: Vehicle, new_route_plan: List[OrderLocation], c
 
     current_drive_time = current_time
     current_drive_distance = vehicle.drive_distance
+    # n_seats = vehicle.n_seats  # 如果动态判断上车可行性
 
     pick_up_distance = {}  # 记录每一个订单在被接到时行驶的距离
     orders_detour_ratio = {}  # 记录每一个订单的绕路比
-    for order_location, vehicle_order_distance in network.simulate_vehicle_drive_on_route_plan(vehicle.location, new_route_plan):
+    for order_location, vehicle_order_distance in network.simulate_drive_on_route_plan(vehicle.location, new_route_plan):
         current_drive_time += (vehicle_order_distance / AVERAGE_SPEED)  # 单位 s
         current_drive_distance += vehicle_order_distance  # 行驶距离
         belong_to_order = order_location.belong_to_order  # 订单坐标隶属的订单（这样赋值是浅复制？）
         if isinstance(order_location, PickLocation):
+            # if n_seats - belong_to_order.n_riders <= 0:  # 表示无法在此时加入新的乘客
+            #     return RoutePlanInfo(orders_detour_ratio={}, route_plan_distance=0.0, is_feasible=False)
             if current_drive_time > belong_to_order.request_time + belong_to_order.max_wait_time:  # 无法满足最大等待时间
                 return RoutePlanInfo(orders_detour_ratio={}, route_plan_distance=np.inf, is_feasible=False)
             else:
                 pick_up_distance[belong_to_order] = current_drive_distance  # 更新接乘客已经行驶的里程
 
         if isinstance(order_location, DropLocation):
+            # n_seats += belong_to_order.n_riders
             if belong_to_order in pick_up_distance:
                 real_order_distance = current_drive_distance - pick_up_distance[belong_to_order]
             else:
@@ -93,7 +97,7 @@ def get_route_plan_info(vehicle: Vehicle, new_route_plan: List[OrderLocation], c
     return info
 
 
-def compute_cost(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph) \
+def compute_cost(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph) \
         -> float:
     """
     计算车辆的当前的位置按照某一个路线的成本
@@ -111,7 +115,7 @@ def compute_cost(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_
     return cost
 
 
-def compute_profit(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph) \
+def compute_profit(vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph) \
         -> float:
     """
     按照当前路径规划下的对平台的收益
@@ -154,7 +158,7 @@ class PlanningOptimizer:
     def reset(self):
         raise NotImplementedError
 
-    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph):
+    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph):
         raise NotImplementedError
 
     def get_optimize_value(self):
@@ -174,7 +178,7 @@ class MaximizeProfitOptimizer(PlanningOptimizer):
         self.best_value = -np.inf  # 由于需要最大化利润，所以初始化为无穷小
         self.best_route_plan = []
 
-    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph):
+    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph):
         profit = self.compute_value_method(vehicle, new_route_plan, current_time, network)
         if self.best_value < profit:
             self.best_value = profit
@@ -191,14 +195,14 @@ class MinimizeCostOptimizer(PlanningOptimizer):
         self.best_value = np.inf  # 由于需要最小化成本，所以初始化为无穷大
         self.best_route_plan = []
 
-    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: NetworkGraph):
+    def optimize(self, vehicle: Vehicle, new_route_plan: List[OrderLocation], current_time: int, network: Graph):
         cost = self.compute_value_method(vehicle, new_route_plan, current_time, network)
         if self.best_value > cost:
             self.best_value = cost
             self.best_route_plan = new_route_plan
 
 
-def insert(vehicle: Vehicle, order: Order, current_time: int, network: NetworkGraph, optimizer: PlanningOptimizer):
+def insert(vehicle: Vehicle, order: Order, current_time: int, network: Graph, optimizer: PlanningOptimizer):
     """
     这个路径规划框架是 微软亚洲研究院 在 ICDE2013 中的论文里面采用的方法
     论文名称是 T-Share: A Large-Scale Dynamic Taxi Ridesharing Service T-Share
@@ -213,20 +217,17 @@ def insert(vehicle: Vehicle, order: Order, current_time: int, network: NetworkGr
     """
     # 这里面所有操作都不可以改变自身原有的变量的值 ！！！！！
     optimizer.reset()    # 优化器初始化重要！！！！
-    start_location = order.pick_location  # 订单的起始点
-    end_location = order.drop_location  # 订单的终止点
+    pick_location = order.pick_location  # 订单的起始点
+    drop_location = order.drop_location  # 订单的终止点
     original_route_plan = vehicle.route_plan  # 车辆此时的原始路径规划
     n = len(original_route_plan)
     for i in range(n + 1):
         for j in range(i, n + 1):
-            new_route_plan = original_route_plan[:i] + [start_location] + \
-                             original_route_plan[i:j] + [end_location] + \
-                             original_route_plan[j:]
-
+            new_route_plan = original_route_plan[:i] + [pick_location] + original_route_plan[i:j] + [drop_location] + original_route_plan[j:]
             optimizer.optimize(vehicle, new_route_plan, current_time, network)  # 优化器进行优化
 
 
-def rearrange(vehicle: Vehicle, order: Order, current_time: int, network: NetworkGraph, optimizer: PlanningOptimizer):
+def rearrange(vehicle: Vehicle, order: Order, current_time: int, network: Graph, optimizer: PlanningOptimizer):
     """
     这个路径规划框架是 Mohammad Asghari 在 SIGSPATIAL-16 中论文里面采用的方法
     论文名称是 Price-aware Real-time Ride-sharing at Scale An Auction-based Approach
@@ -254,7 +255,7 @@ def rearrange(vehicle: Vehicle, order: Order, current_time: int, network: Networ
                 _cur_list_copy.append(order_location)
                 _rem_list_copy = _rem_list[:i] + _rem_list[i + 1:]
                 if isinstance(order_location, PickLocation):
-                    _rem_list_copy.append(order_location.belong_to_order.end_location)
+                    _rem_list_copy.append(order_location.belong_to_order.drop_location)
                 _cur_list_copy.pop()
 
     def _get_remain_list() -> List[OrderLocation]:

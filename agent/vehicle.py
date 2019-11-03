@@ -7,8 +7,8 @@ from typing import List
 import numpy as np
 
 from agent.order import Order
-from network.transport_network.graph import NetworkGraph
-from network.transport_network.location import VehicleLocation, PickLocation, DropLocation, GeoLocation
+from network.transport_graph import _Graph
+from network.transport_graph1.location import VehicleLocation, PickLocation, DropLocation
 from setting import AVERAGE_SPEED
 from setting import TIME_SLOT
 
@@ -51,7 +51,7 @@ class Vehicle:
         bidding_strategy = cls.bidding_strategy
         bidding_strategy.get_bids(self, orders, shortest_distance, current_time)
 
-    def drive_on_random(self, network: NetworkGraph):  # TODO 需要修改
+    def drive_on_random(self, network: _Graph):  # TODO 需要修改
         """
         车辆随机在路上行驶
         :param network: 交通路网
@@ -64,7 +64,7 @@ class Vehicle:
         could_drive_distance = AVERAGE_SPEED * TIME_SLOT
         self.drive_distance += network.real_vehicle_drive_on_random(self.location, could_drive_distance)
 
-    def drive_on_route_plan(self, network: NetworkGraph):
+    def drive_on_route_plan(self, network: _Graph):
         """
         车辆自己按照自己的路径规划行驶
         :param network: 交通路网

@@ -2,8 +2,8 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/22
-from network.transport_network.location import PickLocation
-from network.transport_network.location import DropLocation
+from network.location import PickLocation
+from network.location import DropLocation
 
 
 class Order:
