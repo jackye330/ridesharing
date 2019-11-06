@@ -17,10 +17,8 @@ from env.location import DropLocation
 from env.network import Network
 from utility import equal
 
-__all__ = [
-    "compute_profit", "compute_cost",
-    "MaximizeProfitOptimizer", "MinimizeCostOptimizer",
-    "inserting", "rescheduling"]
+__all__ = ["get_route_plan_info", "compute_profit", "compute_cost",
+           "MaximizeProfitOptimizer", "MinimizeCostOptimizer", "inserting", "rescheduling"]
 
 
 class RoutePlanInfo:
