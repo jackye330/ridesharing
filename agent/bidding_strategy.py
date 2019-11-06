@@ -2,10 +2,12 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/27
-from network.location import OrderLocation
-from network.graph import Graph
+from env.location import OrderLocation
+from env.network import Network
 from typing import List
-from setting import AVERAGE_SPEED
+from agent.vehicle import Vehicle
+from agent.order import Order
+from utility import equal
 
 __all__ = ["SingleOrderBid", "BiddingStrategy", "AdditionalValueStrategy", "PickUpDistanceStrategy"]
 
@@ -21,7 +23,7 @@ class SingleOrderBid:
 class BiddingStrategy:
     __slots__ = []
 
-    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
+    def get_bids(self, vehicle: Vehicle, orders, network: Network, current_time: int):
         raise NotImplementedError
 
 
@@ -32,7 +34,7 @@ class AdditionalValueStrategy(BiddingStrategy):  # 增加量的投标策略 例�
         self.optimizer = optimizer
         self.route_planning_method = route_planning_method
 
-    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
+    def get_bids(self, vehicle: Vehicle, orders: List[Order], network: Network, current_time: int):
         compute_value_method = self.optimizer.compute_value_method
         original_value = compute_value_method(vehicle, vehicle.route_plan, current_time, network)
         vehicle_bids = {}
@@ -45,15 +47,12 @@ class AdditionalValueStrategy(BiddingStrategy):  # 增加量的投标策略 例�
 
 class PickUpDistanceStrategy(BiddingStrategy):  # 采用接送距离作为投标距离
 
-    def get_bids(self, vehicle, orders, network: Graph, current_time: int):
-        from agent.route_planning import compute_cost
-        original_cost = compute_cost(vehicle, vehicle.route_plan, current_time, network)
+    def get_bids(self, vehicle: Vehicle, orders: List[Order], network: Network, current_time: int):
         vehicle_bids = {}
         for order in orders:
             rest_of_distance = network.compute_vehicle_rest_pick_up_distance(vehicle.location, order.pick_location)
-            rest_of_time = order.request_time + order.max_wait_time - current_time
-            if rest_of_distance < AVERAGE_SPEED * rest_of_time and \
-                    0 < original_cost < order.trip_fare and \
-                    order.n_riders < vehicle.n_seats:
-                vehicle_bids[order] = SingleOrderBid(None, rest_of_distance)  # TODO后续需要修改统一
+            rest_of_time = order.request_time + order.wait_time - current_time
+            if (rest_of_distance < Vehicle.average_speed * rest_of_time or equal(rest_of_distance, Vehicle.average_speed * rest_of_time)) and \
+                    order.n_riders < vehicle.available_seats:
+                vehicle_bids[order] = SingleOrderBid([], rest_of_distance)  # TODO后续需要修改统一
         return vehicle_bids

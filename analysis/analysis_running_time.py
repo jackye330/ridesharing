@@ -7,7 +7,7 @@ import time
 from simulation import *
 import matplotlib.pyplot as plt
 
-from algorithm.matching import *
+from algorithm.simple_dispatching import *
 from setting import *
 
 
