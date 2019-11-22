@@ -24,8 +24,8 @@ def orders_dispatch_with_nearest_dispatch(
     :return payments: 胜者支付 dict: {Vehicle:(Order,float)}
     :return social_welfare：社会福利
     :return social_cost: 胜者的总成本 float
-    :return total_utility: 胜者的总效用 float
-    :return total_profit: 平台的收益 float
+    :return total_driver_payoffs: 胜者的总效用 float
+    :return platform_profit: 平台的收益 float
     :return empty_vehicle_rate 一分钟后空车的比例
     """
     # 对于每一个订单取距离最近的车分配，如果这个车的调度是可以满足条件的，而且容量是可以满足需求的
@@ -43,26 +43,26 @@ def orders_dispatch_with_nearest_dispatch(
         # 首先将车辆按照距离尽心排序(有的车在两个点中间)
         distance = {}
         for vehicle in vehicles:
-            two_location_distance = shortest_distance[vehicle.location.osm_index, order.start_location.osm_index]
+            two_location_distance = shortest_distance[vehicle.location.osm_index, order.pick_location.osm_index]
             if vehicle.is_between == Vehicle.IS_BETWEEN_TWO_INDEX:
                 # 顺路或不能反向行驶
-                if shortest_distance[vehicle.goal_index, order.start_location.osm_index] + \
+                if shortest_distance[vehicle.goal_index, order.pick_location.osm_index] + \
                         shortest_distance[vehicle.location.osm_index, vehicle.goal_index] - vehicle.between_distance < \
                         two_location_distance + vehicle.between_distance or \
                         shortest_distance[vehicle.goal_index, vehicle.location.osm_index] == np.inf:
-                    distance[vehicle] = shortest_distance[vehicle.goal_index, order.start_location.osm_index] + \
+                    distance[vehicle] = shortest_distance[vehicle.goal_index, order.pick_location.osm_index] + \
                                         shortest_distance[
                                             vehicle.location.osm_index, vehicle.goal_index] - vehicle.between_distance
                 else:
                     distance[vehicle] = two_location_distance + vehicle.between_distance
             else:
-                distance[vehicle] = shortest_distance[vehicle.location.osm_index][order.start_location.osm_index]
+                distance[vehicle] = shortest_distance[vehicle.location.osm_index][order.pick_location.osm_index]
 
         vehicles.sort(key=lambda v: distance[v])
 
         for vehicle in vehicles:
             # 如果人数过多就继续考虑
-            if order.n_riders > vehicle.n_seats:
+            if order.n_riders > vehicle.available_seats:
                 continue
 
             rest_of_time = order.max_wait_time + order.request_time - current_time
@@ -72,15 +72,15 @@ def orders_dispatch_with_nearest_dispatch(
                 break
 
             # 计算已经添加这个订单之后的费用
-            original_cost = vehicle.compute_cost(shortest_distance, vehicle.route_plan, current_time)
+            original_cost = vehicle.compute_cost(shortest_distance, vehicle.route, current_time)
             current_cost, route_plan = vehicle.find_route_plan(shortest_distance, order, current_time)
             additional_cost = current_cost - original_cost
 
             if 0.0 < additional_cost < order.trip_fare:
                 # 将订单分配给这个车辆
                 dispatched_orders.add(order)
-                vehicle.n_seats -= order.n_riders
-                vehicle.route_plan = route_plan
+                vehicle.available_seats -= order.n_riders
+                vehicle.route = route_plan
                 order.belong_to_vehicle = vehicle
 
                 if vehicle not in payments:
@@ -107,15 +107,15 @@ def orders_dispatch_with_nearest_dispatch(
         if vehicle not in payments:
             # 没有在胜者集合的而且没有路线目标的随机更新下一个位置
             if vehicle.status == Vehicle.WITHOUT_MISSION_STATUS:
-                vehicle.update_random_location(shortest_distance, shortest_path_with_minute, adjacent_nodes)
+                vehicle.drive_on_random(shortest_distance, shortest_path_with_minute, adjacent_nodes)
             else:
-                vehicle.update_order_location(shortest_distance, shortest_path)
+                vehicle.drive_on_route(shortest_distance, shortest_path)
             continue
         # 如果是胜者者的话就要决定最优路线而且还要更新订单的状态
-        vehicle.update_order_location(shortest_distance, shortest_path)
+        vehicle.drive_on_route(shortest_distance, shortest_path)
     for vehicle in vehicles:
         if form_location[vehicle] == vehicle.location.osm_index:
-            print("位置没变", vehicle.vehicle_id, vehicle.location.osm_index, vehicle.goal_index, vehicle.route_plan)
+            print("位置没变", vehicle.vehicle_id, vehicle.location.osm_index, vehicle.goal_index, vehicle.route)
     empty_vehicle_num = 0
     for vehicle in vehicles:
         # 统计空闲车的数量

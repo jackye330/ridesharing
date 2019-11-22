@@ -100,4 +100,5 @@ class Order:
     def __repr__(self):
         # return "{0} -> {1} fare:{2} detour_ratio:{3} rider_number:{4}". \
         #     format(self.start_location, self.end_location, self.order_fare, self.detour_ratio, self.n_riders)
-        return "request_time in {0} wait_time {1}, rider_number: {2}".format(self.request_time, self.wait_time, self.n_riders)
+        return "order_id: {0} request_time: {1} wait_time: {2}, rider_number: {3}".\
+            format(self.order_id, self.request_time, self.wait_time, self.n_riders)
