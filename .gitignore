@@ -1,10 +1,9 @@
-/order_data
-/network_data
-/car_fuel_consumption_data
-/env_data
 /result
+/env_data
+/network_data/preprocess/Chicago
+/network_data/preprocess/Manhattan
+/order_data/preprocess
+/order_data/order_data_2016_06_*.csv
 /test
 /.idea
 /__pycache__
-/result_mat
-/process_didi_data
