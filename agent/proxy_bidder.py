@@ -2,92 +2,118 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/27
+from typing import Set, Dict, List
+
+from agent.utility import OrderBid, VehicleType
+from algorithm.route_planning.planner import RoutePlanner
+from algorithm.route_planning.utility import get_route_info, get_route_cost_by_route_info, get_route_profit_by_route_info
 from env.location import OrderLocation
 from env.network import Network
-from typing import List
-from agent.vehicle import Vehicle
 from env.order import Order
-from utility import equal
-from constant import EMPTY_SEQUENCE
 
-__all__ = ["OrderBid", "ProxyBidder", "generate_proxy_bidder"]
-
-
-class OrderBid:
-    __slots__ = ["route_plan", "value"]
-
-    def __init__(self, value, route_plan: List[OrderLocation]):
-        self.value = value
-        self.route_plan = route_plan
-
-    def __setattr__(self, key, value):
-        if key in ["route", "value"]:
-            raise Exception("常量不可以修改")
+__all__ = ["ProxyBidder", "AdditionalCostBidder", "AdditionalProfitBidder"]
 
 
 class ProxyBidder:
     __slots__ = []
 
-    def get_bids(self, vehicle: Vehicle, orders: List[Order], current_time: int, network: Network):
+    def get_bid(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], order: Order, current_time: int, network: Network, **other_info) -> OrderBid:
+        """
+        如果投标不合理就会返回None
+        :param vehicle_type: 车辆当前信息
+        :param route_planner: 路线规划器
+        :param old_route: 车辆行驶路线
+        :param order: 订单
+        :param current_time: 当前时间
+        :param network: 路网
+        :return:
+        """
+        raise NotImplementedError
+
+    def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
+        """
+        :param vehicle_type: 车辆当前信息
+        :param route_planner: 路线规划器
+        :param old_route: 车辆行驶路线
+        :param orders: 订单集合
+        :param current_time: 当前时间
+        :param network: 路网
+        :return:
+        """
         raise NotImplementedError
 
 
-class AdditionalValueBidder(ProxyBidder):
+class AdditionalCostBidder(ProxyBidder):
     """
-    利用优化量的增值作为投标的代理投标者
-    增值可以是 车辆成本的增加量/平台利润的增加量
+    利用优化量的增值作为投标的代理投标者, 这里的增量既可以是成本
     """
     __slots__ = []
 
-    def get_bids(self, vehicle: Vehicle, orders: List[Order], current_time: int, network: Network):
-        route_planner = vehicle.route_planner
-        optimizer = route_planner.optimizer
-        compute_value_method = optimizer.compute_value_method
-        old_value = compute_value_method(vehicle, vehicle.route, current_time, network)
-        vehicle_bids = {}
+    def __init__(self):
+        super(AdditionalCostBidder, self).__init__()
+
+    def get_bid(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], order: Order, current_time: int, network: Network, **other_info) -> OrderBid:
+        planning_result = route_planner.planning(vehicle_type, old_route, order, current_time, network)
+        if planning_result.is_feasible:
+            new_cost = planning_result.route_cost
+            if "old_cost" in other_info:
+                old_cost = other_info["old_cost"]
+            else:
+                old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
+                old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+            bid = OrderBid(new_cost - old_cost, planning_result.route, new_cost - old_cost)
+        else:
+            bid = None
+        return bid
+
+    def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner,  old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
+        old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
+        old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+        order_bids = dict()
         for order in orders:
-            if order.n_riders > vehicle.available_seats:  # 首先看人数是否可以对应
-                continue
-            route_planner.planning(vehicle, order, current_time)  # 这里面会检查接送距离/绕路比
-            new_value = optimizer.get_best_value()
-            new_route = optimizer.get_best_route()
-            additional_value = new_value - old_value
-            vehicle_bids[order] = OrderBid(additional_value, new_route)
-        return vehicle_bids
+            bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_cost=old_cost)
+            if bid is not None:
+                order_bids[order] = bid
+        return order_bids
 
 
-class PickUpDistanceBidder(ProxyBidder):
+class AdditionalProfitBidder(ProxyBidder):
     """
-    将车辆距离订单的距离作为投标的代理投标者
+    利用优化量的增值作为投标的代理投标者, 这里的增量既可以是平台利润
     """
+    __slots__ = []
 
-    def get_bids(self, vehicle: Vehicle, orders: List[Order], current_time: int, network: Network):
-        vehicle_bids = {}
+    def __init__(self):
+        super(AdditionalProfitBidder, self).__init__()
+
+    def get_bid(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], order: Order, current_time: int, network: Network, **other_info) -> OrderBid:
+        planning_result = route_planner.planning(vehicle_type, old_route, order, current_time, network)
+        if planning_result.is_feasible:
+            new_profit = planning_result.route_profit
+            new_cost = planning_result.route_cost
+            if "old_profit" in other_info and "old_cost" in other_info:
+                old_profit = other_info["old_profit"]
+                old_cost = other_info["old_cost"]
+            else:
+                old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
+                old_profit = other_info["old_profit"] if "old_profit" in other_info else get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
+                old_cost = other_info["old_cost"] if "old_cost" in other_info else get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+            bid = OrderBid(new_profit - old_profit, planning_result.route, new_cost - old_cost)
+        else:
+            bid = None
+        return bid
+
+    def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
+        old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
+        ##############################################
+        if not old_route_info.is_feasible:
+            raise Exception("存在问题，路径规划")
+        #######################################################
+        old_profit = get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
+        old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+        order_bids = dict()
         for order in orders:
-            if order.n_riders > vehicle.available_seats:
-                continue
-            rest_of_time = order.request_time + order.wait_time - current_time
-            rest_of_distance = network.compute_vehicle_rest_pick_up_distance(vehicle.location, order.pick_location)
-            if rest_of_distance < Vehicle.average_speed * rest_of_time or equal(rest_of_distance, Vehicle.average_speed * rest_of_time):
-                vehicle_bids[order] = OrderBid(rest_of_distance, EMPTY_SEQUENCE)
-        return vehicle_bids
-
-
-def generate_proxy_bidder():
-    """
-    用于生成投标测的函数
-    :return:
-    """
-    from setting import BIDDING_STRATEGY
-    if BIDDING_STRATEGY == "PICK_DISTANCE":
-        proxy_bidder = PickUpDistanceBidder()
-    elif BIDDING_STRATEGY == "ADDITIONAL":
-        proxy_bidder = AdditionalValueBidder()
-    else:
-        proxy_bidder = None
-
-    return proxy_bidder
-
-
-
-
+            bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_profit=old_profit, old_cost=old_cost)
+            if bid is not None:
+                order_bids[order] = bid
+        return order_bids

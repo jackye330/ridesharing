@@ -2,268 +2,176 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/26
-from queue import Queue
-from typing import Tuple, Set, Dict, List
+import time
 from collections import defaultdict
+from typing import List, Tuple, Set, NoReturn
 
-import numpy as np
-from scipy.optimize import linear_sum_assignment
-
-from agent.order import Order
 from agent.vehicle import Vehicle
-from algorithm.orders_matching.utility import MatchResult
+from algorithm.utility import Mechanism
+from algorithm.simple_dispatching.matching_graph import MaximumWeightMatchingGraph, BipartiteGraph
+from algorithm.simple_dispatching.matching_pool import MatchingPairPool
+from env.network import Network
+from env.order import Order
+from utility import is_enough_small
+
+__all__ = ["vcg_mechanism", "greedy_mechanism"]
 
 
-class BipartiteGraph:
-    __slots__ = ["order_link_vehicle", "vehicle_link_order", "costs", "weights",
-                 "index2order", "index2vehicle", "order2index", "vehicle2index", "sw"]
+class VCGMechanism(Mechanism):
+    """
+    使用二部图匹配决定分配，利用vcg价格进行支付，主要基vcg机制理论, 最大化社会福利 pair_social_welfare = sum{order.order_fare} - sum{bid.additional_cost}
+    """
+
+    __slots__ = ["graph"]
 
     def __init__(self):
-        self.order_link_vehicle = {}
-        self.vehicle_link_order = {}
-        self.costs = {}  # 每一个匹配对的增加成本
-        self.weights = {}  # 每一个匹配对的社会福利
-        # 用于计算
-        self.index2order = {}
-        self.index2vehicle = {}
-        self.order2index = {}
-        self.vehicle2index = {}
-        self.sw = np.array([])  # 用于求解最优匹配的矩阵
+        super(VCGMechanism, self).__init__()
 
-    def add_edge(self, order: Order, vehicle: Vehicle, cost: float, weight: float):
-        if order not in self.order_link_vehicle:
-            self.order_link_vehicle[order] = set()
-        self.order_link_vehicle[order].add(vehicle)
+    @staticmethod
+    def _build_graph(vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network, graph_type) -> BipartiteGraph:
+        feasible_vehicles = set()
+        feasible_orders = set()
+        bids = dict()
 
-        if vehicle not in self.vehicle_link_order:
-            self.vehicle_link_order[vehicle] = set()
-        self.vehicle_link_order[vehicle].add(order)
+        for vehicle in vehicles:
+            order_bids = vehicle.get_bids(orders, current_time, network)
+            order_bids = {order: order_bid for order, order_bid in order_bids.items() if is_enough_small(order_bid.additional_cost, order.order_fare)}  # 这里可以保证订单的合理性
+            if len(order_bids) > 0:
+                feasible_vehicles.add(vehicle)
+                bids[vehicle] = order_bids
+            for order in order_bids:
+                feasible_orders.add(order)
 
-        self.costs[order, vehicle] = cost
-        self.weights[order, vehicle] = weight
+        graph = graph_type(feasible_vehicles, feasible_orders)
+        for vehicle, order_bids in bids.items():
+            for order, order_bid in order_bids.items():
+                graph.add_edge(vehicle, order, order.order_fare - order_bid.additional_cost)
+        graph.bids = bids
 
-    def remove_vehicle(self, vehicle: Vehicle):
-        self.vehicle_link_order[vehicle] = []
-        self.sw[:, self.vehicle2index[vehicle]] = 0
+        return graph
 
-    def add_vehicle(self, vehicle, vehicle_orders_set: Set[Vehicle]):
-        self.vehicle_link_order[vehicle] = vehicle_orders_set
-        vehicle_index = self.vehicle2index[vehicle]
-        for order in vehicle_orders_set:
-            self.sw[self.order2index[order], vehicle_index] = -(self.weights[order, vehicle])
-
-    def build_index(self):
-        self.index2order = {i: order for i, order in enumerate(self.order_link_vehicle.keys())}
-        self.order2index = {order: i for i, order in enumerate(self.order_link_vehicle.keys())}
-        self.index2vehicle = {i: vehicle for i, vehicle in enumerate(self.vehicle_link_order.keys())}
-        self.vehicle2index = {vehicle: i for i, vehicle in enumerate(self.vehicle_link_order.keys())}
-        self.sw = np.array([[0.0] * len(self.vehicle_link_order) for _ in range(len(self.order_link_vehicle))])
-        for vehicle, link_orders in self.vehicle_link_order.items():
-            vehicle_index = self.vehicle2index[vehicle]
-            for order in link_orders:
-                order_index = self.order2index[order]
-                self.sw[order_index, vehicle_index] = -(self.weights[order, vehicle])
-
-    def get_sub_graph(self, order: Order, check_order: Set[Order], check_vehicle: Set[Vehicle]):
-        temp_order_set = set()
-        temp_vehicle_set = set()
-
-        temp_order_set.add(order)
-        check_order.add(order)
-        Q = Queue()
-        Q.put(order)
-        while not Q.empty():
-            node = Q.get()
-            if isinstance(node, Vehicle):
-                for order in self.vehicle_link_order[node]:
-                    if order not in check_order:
-                        check_order.add(order)
-                        temp_order_set.add(order)
-                        Q.put(order)
-            else:
-                for vehicle in self.order_link_vehicle[node]:
-                    if vehicle not in check_vehicle:
-                        check_vehicle.add(vehicle)
-                        temp_vehicle_set.add(vehicle)
-                        Q.put(vehicle)
-
-        cls = type(self)
-        sub_graph = cls()
-        for order in temp_order_set:
-            for vehicle in self.order_link_vehicle[order]:
-                if vehicle not in temp_vehicle_set:
-                    continue
-                sub_graph.add_edge(order, vehicle, self.costs[order, vehicle], self.weights[order, vehicle])
-        return sub_graph
-
-    def get_sub_graphs(self):
-        check_order = set()  # 已经处理过的订单
-        check_vehicle = set()  # 已经得到订单的车辆
-        for order in self.order_link_vehicle:
-            if order in check_order:
-                continue
-
-            # 构建子图
-            sub_graph = self.get_sub_graph(order, check_order, check_vehicle)
-            sub_graph.build_index()
-            yield sub_graph
-
-    def maximum_weight_match(self, return_match=False) -> Tuple[List[Tuple[Order, Vehicle]], float]:
-        """
-        :param return_match: 如果返回匹配关系就要将订单和车辆的匹配对列表
-        :return match: 订单和车辆的匹配对
-        :return social_welfare: 社会福利
-        """
-        row_index, col_index = linear_sum_assignment(self.sw)
-        match = []
-        if return_match:
-            for order_index, vehicle_index in zip(row_index, col_index):
-                order = self.index2order[order_index]
-                vehicle = self.index2vehicle[vehicle_index]
-                if order in self.vehicle_link_order[vehicle]:
-                    match.append((order, vehicle))
-        social_welfare = -(self.sw[row_index, col_index].sum())
-        return match, social_welfare
-
-
-def vcg_mechanism(bids: Dict[Vehicle, Dict[Order, float]]) \
-        -> MatchResult:
-    """
-    使用二部图匹配决定分配，利用vcg价格进行支付，主要基vcg机制理论
-    :param bids 司机投标
-    :return result: 拍卖结果
-    """
-    # 初始化返回结果
-    result = MatchResult(
-        matched_orders=set(),
-        matched_vehicles=set(),
-        payments={},
-        social_welfare=0.0,
-        social_cost=0.0,
-        total_payment=0.0,
-        total_utility=0.0,
-        total_profit=0.0
-    )
-
-    # 构建车辆与订单之间的二部匹配图
-    main_graph = BipartiteGraph()
-    for vehicle in bids:
-        for order, additional_cost in bids[vehicle].items():
-            main_graph.add_edge(order, vehicle, additional_cost, order.trip_fare - additional_cost)
-
-    for sub_graph in main_graph.get_sub_graphs():
-        # 胜者决定
-        sub_match, sub_social_welfare = sub_graph.maximum_weight_match(return_match=True)
-        result.social_welfare += sub_social_welfare
-
-        # 定价计算
-        for each_match_pair in sub_match:
-            without_order, without_vehicle = each_match_pair
-
+    def driver_pricing(self, bipartite_graph: BipartiteGraph, match_pairs: List[Tuple[Vehicle, Order]], social_welfare: float):
+        for winner_vehicle, corresponding_order in match_pairs:
             # 计算VCG价格
-            additional_cost = sub_graph.costs[without_order, without_vehicle]
-            remove_vehicle_orders = sub_graph.vehicle_link_order[without_vehicle]
-            sub_graph.remove_vehicle(without_vehicle)
-            _, sub_social_welfare_without_vehicle = sub_graph.maximum_weight_match()
-            sub_graph.add_vehicle(without_vehicle, remove_vehicle_orders)
-            payment = additional_cost + (sub_social_welfare - sub_social_welfare_without_vehicle)
-            payment = min(payment, without_order.trip_fare)
+            bipartite_graph.temporarily_remove_vehicle(winner_vehicle)  # 临时性的删除一个车辆
+            social_welfare_without_winner, _ = bipartite_graph.maximal_weight_matching(return_match=False)  # 计算没有这辆车时候的社会福利
+            bipartite_graph.recovery_remove_vehicle()  # 恢复被删除的车辆
+            winner_bid = bipartite_graph.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
+            additional_cost = winner_bid.additional_cost
+            driver_reward = min(additional_cost + (social_welfare - social_welfare_without_winner), corresponding_order.order_fare)
+            driver_profit = driver_reward - additional_cost
 
             # 保存结果
-            result.payments[without_vehicle] = (without_order, payment)
-            result.social_cost += additional_cost
-            result.total_payment += payment
-            result.total_utility += (payment - additional_cost)
-            result.total_profit += (without_order.trip_fare - payment)
-            result.matched_orders.add(without_order)
-            result.matched_vehicles.add(without_vehicle)
+            self._dispatched_vehicles.add(winner_vehicle)
+            self._dispatched_orders.add(corresponding_order)
+            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_profit)
+            self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
+            self._social_cost += additional_cost
+            self._total_driver_rewards += driver_reward
+            self._total_driver_payoffs += driver_profit
+            self._platform_profit += (corresponding_order.order_fare - driver_reward)
+        self._social_welfare += social_welfare
 
-    return result
+    def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
+        # 清空上一轮的结果
+        self.reset()
+
+        # 构建图
+        t1 = time.clock()
+        main_graph = self._build_graph(vehicles, orders, current_time, network, MaximumWeightMatchingGraph)
+        self._bidding_time = (time.clock() - t1)  # 统计投标时间
+
+        # 订单分配与司机定价
+        for sub_graph in main_graph.get_sub_graphs():
+            sub_social_welfare, sub_match_pairs = sub_graph.maximal_weight_matching(return_match=True)  # 胜者决定
+            self.driver_pricing(sub_graph, sub_match_pairs, sub_social_welfare)  # 司机定价并统计结果
+        self._running_time = (time.clock() - t1 - self._bidding_time)
 
 
-def myerson_mechanism(bids: Dict[Vehicle, Dict[Order, float]]) \
-        -> MatchResult:
+class GreedyMechanism(Mechanism):
     """
-    使用贪心算法分配，使用临界价格进行支付，主要基于Myerson理论进行设计的机制
-    :param bids: 司机投标
-    :return result: 拍卖结果
+    使用贪心算法分配，使用临界价格进行支付，主要基于Myerson理论进行设计的机制, 最大化社会福利 pair_social_welfare = sum{order.order_fare} - sum{bid.additional_cost}
     """
-    result = MatchResult(
-        matched_orders=set(),
-        matched_vehicles=set(),
-        payments={},
-        social_welfare=0.0,
-        social_cost=0.0,
-        total_payment=0.0,
-        total_utility=0.0,
-        total_profit=0.0
-    )
+    __slots__ = []
 
-    # 构建资源池
-    feasible_orders = set()
-    feasible_vehicles = set()
+    def __init__(self):
+        super(GreedyMechanism, self).__init__()
 
-    reverse_bids = defaultdict(set)  # 反向投标, 表示每一个订单投标车辆
-    for without_vehicle, vehicle_bids in bids.items():
-        for assigned_order, _ in vehicle_bids.items():
-            reverse_bids[assigned_order].add(without_vehicle)
-    pool = []
-    for without_vehicle, vehicle_bids in bids.items():
-        for assigned_order, additional_cost in vehicle_bids.items():
-            if len(reverse_bids[assigned_order]) > 1:  # 只有当前的订单不止被一个车辆投标才会有放进资源池中, 这一招是为了阻止monopoly vehicle出现
-                pool.append((assigned_order.trip_fare - additional_cost, assigned_order, without_vehicle))
-                feasible_orders.add(assigned_order)
-                feasible_vehicles.add(without_vehicle)
-    pool.sort(key=lambda x: -x[0])
-    del reverse_bids
+    @staticmethod
+    def _build_matching_pool(vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network):
+        bids = defaultdict(dict)
+        for vehicle in vehicles:
+            order_bids = vehicle.get_bids(orders, current_time, network)
+            order_bids = {order: order_bid for order, order_bid in order_bids.items() if is_enough_small(order_bid.additional_cost, order.order_fare)}  # 这里可以保证订单的合理性
+            for order, order_bid in order_bids.items():
+                bids[order][vehicle] = order_bid
 
-    # 胜者决定
-    for order_vehicle_pair in pool:
-        if len(result.matched_orders) == len(feasible_orders) or len(result.matched_vehicles) == len(feasible_vehicles):
-            break
-        partial_social_welfare = order_vehicle_pair[0]
-        assigned_order = order_vehicle_pair[1]
-        without_vehicle = order_vehicle_pair[2]
-        additional_cost = assigned_order.trip_fare - partial_social_welfare
+        bids = {order: order_bids for order, order_bids in bids.items() if len(order_bids) >= 2}  # 这里是为了避免monopoly vehicle
+        pool = MatchingPairPool(bids)
+        return pool
 
-        if assigned_order in result.matched_orders or without_vehicle in result.matched_vehicles:
-            continue
-
-        result.payments[without_vehicle] = [assigned_order, additional_cost]
-        result.social_welfare += partial_social_welfare
-        result.social_cost += additional_cost
-        result.matched_orders.add(assigned_order)
-        result.matched_vehicles.add(without_vehicle)
-
-    # 定价计算
-    for without_vehicle in result.matched_vehicles:
-        matched_orders_ = set()
-        matched_vehicles_ = set()
-        feasible_vehicles.remove(without_vehicle)  # 移除了有什么用？把这个过程在走一遍
-
-        assigned_order = result.payments[without_vehicle][0]
-        additional_cost = result.payments[without_vehicle][1]
-        payment = additional_cost
-        for order_vehicle_pair in pool:
-            if len(matched_orders_) == len(feasible_orders) or len(matched_vehicles_) == len(feasible_vehicles):
+    def _order_matching(self, pool: MatchingPairPool) -> List[Tuple[Vehicle, Order]]:
+        match_pairs = list()
+        for vehicle_order_pair in pool:
+            if len(self._dispatched_vehicles) == pool.vehicle_number or len(self._dispatched_orders) == pool.order_number:
                 break
-            partial_social_welfare_ = order_vehicle_pair[0]
-            order_ = order_vehicle_pair[1]
-            vehicle_ = order_vehicle_pair[2]
-
-            if vehicle_ in matched_vehicles_ or order_ in matched_orders_ or without_vehicle == vehicle_:
+            dispatched_vehicle, dispatched_order, _ = vehicle_order_pair
+            if dispatched_vehicle in self._dispatched_vehicles or dispatched_order in self._dispatched_orders:
                 continue
-            payment = max(payment, assigned_order.trip_fare - partial_social_welfare_)
-            matched_orders_.add(order_)
-            matched_vehicles_.add(vehicle_)
+            self._dispatched_vehicles.add(dispatched_vehicle)  # 重要的事情：这一段代码必须写在这里不然会出问题的
+            self._dispatched_orders.add(dispatched_order)
+            match_pairs.append((dispatched_vehicle, dispatched_order))
+        return match_pairs
 
-            if assigned_order == order_:
-                result.payments[without_vehicle] = (assigned_order, min(assigned_order.trip_fare, payment))
-                break
+    def _driver_pricing(self, pool: MatchingPairPool, match_pairs: List[Tuple[Vehicle, Order]]) -> NoReturn:
+        for winner_vehicle, corresponding_order in match_pairs:
+            # 计算临界价格
+            dispatched_vehicles_without_winner = set()
+            dispatched_orders_without_winner = set()
+            dispatched_vehicles_without_winner.add(winner_vehicle)  # 首先就将改车辆排除
+            winner_bid = pool.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
 
-        result.total_utility += (result.payments[without_vehicle][1] - additional_cost)
-        result.total_payment += result.payments[without_vehicle][1]
-        result.total_profit += (assigned_order.trip_fare - result.payments[without_vehicle][1])
-        feasible_vehicles.add(without_vehicle)
+            driver_reward = winner_bid.additional_cost
+            for vehicle_order_pair in pool:  # 剔除已经胜利的车辆重新匹配
+                if len(dispatched_vehicles_without_winner) == pool.vehicle_number or len(dispatched_orders_without_winner) == pool.order_number:
+                    break
+                dispatched_vehicle, dispatched_order, pair_social_welfare = vehicle_order_pair
+                if dispatched_vehicle in dispatched_vehicles_without_winner or dispatched_order in dispatched_orders_without_winner:  # 剔除已经分配的订单
+                    continue
+                driver_reward = max(driver_reward, corresponding_order.order_fare - pair_social_welfare)
+                dispatched_vehicles_without_winner.add(dispatched_vehicle)
+                dispatched_orders_without_winner.add(dispatched_order)
+                if corresponding_order == dispatched_order:  # 循环终止条件
+                    break
+            driver_reward = min(corresponding_order.order_fare, driver_reward)
+            driver_profit = driver_reward - winner_bid.additional_cost
 
-    return result
+            # 保存结果
+            self._social_welfare += (corresponding_order.order_fare - winner_bid.additional_cost)
+            self._social_cost += winner_bid.additional_cost
+            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_profit)
+            self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
+            self._total_driver_rewards += driver_reward
+            self._total_driver_payoffs += driver_profit
+            self._platform_profit += (corresponding_order.order_fare - driver_reward)
+
+    def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
+        # 清空上一轮的结果
+        self.reset()
+
+        # 构建资源池
+        t1 = time.clock()
+        pool = self._build_matching_pool(vehicles, orders, current_time, network)
+        self._bidding_time += (time.clock() - t1)
+
+        # 订单分配与司机定价
+        match_pairs = self._order_matching(pool)  # 胜者决定
+        self._driver_pricing(pool, match_pairs)  # 司机定价并记录结果
+        self._running_time += (time.clock() - t1 - self._bidding_time)
+
+        print("self.bidding_time", self._bidding_time)
+
+
+# 对外的接口
+vcg_mechanism = VCGMechanism()
+greedy_mechanism = GreedyMechanism()

@@ -2,160 +2,307 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/22
-from inspect import getgeneratorstate
-from typing import List
+from typing import List, NoReturn, Dict, Set
 
-from constant import FIRST_INDEX
-from constant import FLOAT_ZERO
-from setting import TIME_SLOT
-from env.order import Order
+import numpy as np
+import pandas as pd
+
+from agent.proxy_bidder import ProxyBidder
+from algorithm.route_planning.planner import RoutePlanner
+from algorithm.route_planning.utility import PlanningResult
+from agent.utility import OrderBid, VehicleType
+from setting import FIRST_INDEX, FLOAT_ZERO, INT_ZERO, VEHICLE_FUEL_COST_RATIO
+from env.location import DropLocation, PickLocation, VehicleLocation, OrderLocation
 from env.network import Network
-from env.location import DropLocation
-from env.location import PickLocation
-from env.location import VehicleLocation
+from env.order import Order
 
-__all__ = ["Vehicle", "generate_vehicles"]
+__all__ = ["Vehicle", "generate_grid_vehicles", "generate_real_vehicles"]
 
 
 class Vehicle:
     """
     车辆
-    vehicle_id: 可以唯一标识一个车辆的标志
-    location：车辆位置
-    available_seats: 车辆剩余的座位
-    unit_cost: 车辆单位成本
+    vehicle_id: 车辆id
+    location: 车辆当前位置
+    available_seats:  车辆剩下的位置数目
+    unit_cost: 车俩的单位行驶成本
     route: 车辆的自身的行驶路线 实质上就是包含一系列订单的起始位置的序列
-    driven_distance: 车辆已经行驶的距离
+    random_driven_distance: 车辆随机行驶的距离
+    service_driven_distance: 车辆为了服务行驶的距离
     is_activated: 车辆是否已经激活
     """
-    __slots__ = ["vehicle_id", "location", "available_seats", "unit_cost", "route", "driven_distance", "is_activated"]
-    average_speed = None  # 车辆的平均速度
-    proxy_bidder = None   # 车辆的代理投标者
-    route_planner = None  # 车辆的路线规划器
+    __slots__ = ["_vehicle_id", "_is_activated", "_route",  "_vehicle_type", "_finish_orders_number", "_earn_reward", "_earn_profit"]
+    generate_vehicles_function = None  # 车辆生成函数
+    proxy_bidder: ProxyBidder = None  # 车辆的代理投标者
+    route_planner: RoutePlanner = None  # 车辆的路线规划器
 
     def __init__(self, vehicle_id: int, location: VehicleLocation, available_seats: int, unit_cost: float):
-        """
-        构造函数
-        :param vehicle_id: 车辆id
-        :param location: 车辆当前位置
-        :param available_seats:  车辆剩下的位置数目
-        :param unit_cost: 车俩的单位行驶成本
-        """
-        self.vehicle_id = vehicle_id            # 车辆唯一标识
-        self.location = location                # 车辆当前的位置
-        self.available_seats = available_seats  # 剩下的座位数目
-        self.unit_cost = unit_cost              # 单位行驶成本
-        self.route = []                         # 车辆的行驶路线
-        self.driven_distance = FLOAT_ZERO       # 车辆总行驶距离, 默认没有任何行驶记录
-        self.is_activated = True                # 车辆是否处于激活状态，默认车是激活状态
+        self._vehicle_id: int = vehicle_id  # 车辆唯一标识
+        self._is_activated: bool = True  # 车辆是否处于激活状态，默认车是激活状态
+        self._route = list()  # 车辆的行驶路线
+        self._vehicle_type = VehicleType(
+            location=location,  # 车辆当前的位置
+            available_seats=available_seats,  # 剩下的座位数目
+            unit_cost=unit_cost,  # 单位行驶成本
+            service_driven_distance=FLOAT_ZERO,  # 车俩为了服务行驶的距离
+            random_driven_distance=FLOAT_ZERO  # 车辆随机行驶的距离
+        )
+        self._finish_orders_number: int = INT_ZERO
+        self._earn_reward: float = FLOAT_ZERO
+        self._earn_profit: float = FLOAT_ZERO
+
+    @staticmethod
+    def set_average_speed(average_speed: float) -> NoReturn:
+        VehicleType.vehicle_speed = average_speed
+
+    @staticmethod
+    def set_could_drive_distance(could_drive_distance: float) -> NoReturn:
+        VehicleType.could_drive_distance = could_drive_distance
 
     @classmethod
-    def set_average_speed(cls, average_speed):
-        cls.average_speed = average_speed
+    def set_proxy_bidder(cls, proxy_bidder: ProxyBidder) -> NoReturn:
+        cls.proxy_bidder = proxy_bidder
 
     @classmethod
-    def set_proxy_bidder(cls, bidder):
-        cls.proxy_bidder = bidder
+    def set_route_planner(cls, route_planner: RoutePlanner) -> NoReturn:
+        cls.route_planner = route_planner
 
     @classmethod
-    def set_route_planner(cls, planner):
-        cls.route_planner = planner
+    def set_generate_vehicles_function(cls, function) -> NoReturn:
+        cls.generate_vehicles_function = function
 
-    def get_bids(self, orders: List[Order], network: Network):
-        bidder = self.proxy_bidder
-        bidder.get_bids(self, orders, network)   # 将车辆的信息交给代理投标者进行投标
-
-    def route_planning(self, order: Order, current_time: int):
-        route_planner = self.route_planner
-        return route_planner.planning(order, current_time)
-
-    def drive_on_random(self, network: Network):
+    @classmethod
+    def generate_vehicles(cls, vehicle_number: int, vehicle_speed: float, time_slot: int, proxy_bidder: ProxyBidder,  route_planner: RoutePlanner, network: Network) -> List:
         """
-        车辆随机在路上行驶
-        :param network: 交通路网
+        用于生成一组自己的车辆
+        :param vehicle_number: 车辆数目
+        :param vehicle_speed: 车辆速度
+        :param time_slot: 表示
+        :param proxy_bidder: 代理投标者
+        :param route_planner: 路线规划器
+        :param network: 路网
+        :return:
+        """
+        cls.set_average_speed(vehicle_speed)  # 初初始化车辆速度
+        cls.set_could_drive_distance(vehicle_speed * time_slot)  # 初始化车辆的行驶
+        cls.set_proxy_bidder(proxy_bidder)
+        cls.set_route_planner(route_planner)
+        locations = network.generate_random_locations(vehicle_number, VehicleLocation)  # 得到车辆位置
+        return cls.generate_vehicles_function(locations, vehicle_number)
+
+    @property
+    def vehicle_id(self) -> int:
+        return self._vehicle_id
+
+    @property
+    def is_activated(self) -> bool:
+        """
+        返回当前车俩是否存货
+        :return:
+        """
+        return self._is_activated
+
+    @property
+    def vehicle_type(self) -> VehicleType:
+        """
+        返回车辆类型 （包括车辆的位置，单位成本，可用座位，服务行驶距离，随机行驶距离）
+        :return:
+        """
+        return self._vehicle_type
+
+    @property
+    def unit_cost(self) -> float:
+        """
+        返回单位成本
+        :return:
+        """
+        return self._vehicle_type.unit_cost
+
+    @property
+    def available_seats(self) -> int:
+        """
+        返回车辆当前剩余的座位
+        :return:
+        """
+        return self._vehicle_type.available_seats
+
+    @property
+    def route(self) -> List[OrderLocation]:
+        """
+        返回车俩行驶路线
+        :return:
+        """
+        return self._route
+
+    @property
+    def location(self) -> VehicleLocation:
+        """
+        返回车辆的当前的位置
+        :return:
+        """
+        return self._vehicle_type.location
+
+    @property
+    def service_driven_distance(self) -> float:
+        """
+        返回车俩为了服务行驶的距离
+        :return:
+        """
+        return self._vehicle_type.service_driven_distance
+
+    @property
+    def random_driven_distance(self) -> float:
+        """
+        返回车辆随机行驶的距离
+        :return:
+        """
+        return self._vehicle_type.random_driven_distance
+
+    @property
+    def could_drive_distance(self) -> float:
+        """
+        返回车辆在一个时刻可以移动的距离，这个距离是最小值其实车辆可能行驶更多距离
+        :return:
+        """
+        return VehicleType.could_drive_distance
+
+    @property
+    def vehicle_speed(self) -> float:
+        """
+        返回车辆速度
+        :return:
+        """
+        return VehicleType.vehicle_speed
+
+    @property
+    def finish_orders_number(self) -> int:
+        return self._finish_orders_number
+
+    @property
+    def earn_reward(self) -> float:
+        return self._earn_reward
+
+    @property
+    def earn_profit(self) -> float:
+        return self._earn_profit
+
+    def have_service_mission(self) -> bool:
+        """
+        返回当前车辆是否有服务订单的任务在身
+        :return:
+        """
+        return len(self.route) != INT_ZERO
+
+    def get_bid(self, order: Order, current_time: int, network: Network) -> OrderBid:
+        order_bid = self.proxy_bidder.get_bid(self._vehicle_type, self.route_planner, self._route, order, current_time, network)
+        return order_bid
+
+    def get_bids(self, orders: Set[Order], current_time: int, network: Network) -> Dict[Order, OrderBid]:
+        order_bids = self.proxy_bidder.get_bids(self._vehicle_type, self.route_planner, self._route, orders, current_time, network)
+        return order_bids
+
+    def route_planning(self, order: Order, current_time: int, network: Network) -> PlanningResult:
+        return self.route_planner.planning(self._vehicle_type, self.route, order, current_time, network)
+
+    def drive_on_random(self, network: Network) -> NoReturn:
+        """
+        车辆在路上随机行驶
+        :param network: 路网
         :return:
         ------
         注意：
         不要那些只可以进去，不可以出来的节点
         如果车辆就正好在一个节点之上，那么随机选择一个节点到达，如果不是这些情况就在原地保持不动
         """
-        could_drive_distance = self.average_speed * TIME_SLOT
-        self.driven_distance += network.drive_on_random(self.location, could_drive_distance)
+        self.increase_random_distance(network.drive_on_random(self.location, self.could_drive_distance))
 
-    def drive_on_route_plan(self, network: Network):
+    def drive_on_route(self, current_time: int, network: Network) -> List[Order]:
         """
         车辆自己按照自己的行驶路线
-        :param network: 交通路网
+        :param current_time: 当前时间
+        :param network: 路网
         """
-        un_covered_location_index = FIRST_INDEX                # 未完成订单坐标的最小索引
-        could_drive_distance = self.average_speed * TIME_SLOT  # 车辆可以行驶的距离
-        g = network.drive_on_route_plan(self.location, self.route, could_drive_distance)  # 开启车辆位置更新的生成器
+        un_covered_location_index = FIRST_INDEX  # 未完成订单坐标的最小索引
+        g = network.drive_on_route(self.location, self.route, self.could_drive_distance)  # 开启车辆位置更新的生成器
+        now_time: float = current_time
+        _finish_orders: List[Order] = list()  # 这一轮完成的订单
         for is_access, covered_index, order_location, vehicle_to_order_distance in g:
             # is_access 表示是否可以到达 order_location
             # covered_index 表示车辆当前覆盖的路线规划列表索引
             # order_location 表示当前可以访问的订单位置
-            # partial_drive_distance 表示车辆到 order_location 可以行驶的距离
+            # vehicle_to_order_distance 表示车辆到 order_location 可以行驶的距离
 
-            self.driven_distance += vehicle_to_order_distance  # 更新车辆已经行驶的距离
+            self.increase_service_distance(vehicle_to_order_distance)  # 更新车辆服务行驶的距离
+            now_time = now_time + vehicle_to_order_distance / self.vehicle_speed
             un_covered_location_index = covered_index + 1  # 更新未完成订单的情况
             if is_access:  # 如果当前订单是可以到达的情况
-                belong_to_order = order_location.belong_to_order
+                belong_order: Order = order_location.belong_order
                 if isinstance(order_location, PickLocation):
-                    belong_to_order.pick_up_distance = self.driven_distance  # 更新当前订单的接送行驶距离
-                    # self.available_seats -= belong_to_order.n_riders  # 这种更新适用与动态更新车辆可用座位数量
+                    belong_order.set_pick_status(self.service_driven_distance, int(now_time))  # 更新当前订单的接送行驶距离
+                    self.decrease_available_seats(belong_order.n_riders)
                 if isinstance(order_location, DropLocation):
-                    self.available_seats += belong_to_order.n_riders  # 因为送到乘客了，可以腾出位置
+                    self.increase_available_seats(belong_order.n_riders)
+                    belong_order.set_drop_status(self.service_driven_distance, int(now_time))
+                    self._finish_orders_number += 1
+                    _finish_orders.append(belong_order)
 
-        self.route = self.route[un_covered_location_index:]  # 更新自己的路线规划
+        if un_covered_location_index != FIRST_INDEX:  # 只有有变化才更新路径
+            self.set_route(self.route[un_covered_location_index:])
+        return _finish_orders
 
-        if getgeneratorstate(g) != "GEN_CLOSED":  # 如果生成器没有关闭要自动关闭
-            g.close()
+    def set_route(self, route: List[OrderLocation]) -> NoReturn:
+        self._route = route
+
+    def decrease_available_seats(self, n_riders: int) -> NoReturn:
+        self._vehicle_type.available_seats -= n_riders
+
+    def increase_available_seats(self, n_riders: int) -> NoReturn:
+        self._vehicle_type.available_seats += n_riders
+
+    def increase_earn_reward(self, reward: float):
+        self._earn_reward += reward
+
+    def increase_earn_profit(self, profit: float):
+        self._earn_profit += profit
+
+    def increase_service_distance(self, additional_distance: float) -> NoReturn:
+        self._vehicle_type.service_driven_distance += additional_distance
+
+    def increase_random_distance(self, additional_distance: float) -> NoReturn:
+        self._vehicle_type.random_driven_distance += additional_distance
+
+    def leave_platform(self) -> NoReturn:
+        """
+        按照一定概率离开平台
+        :return:
+        """
+        # TODO 日后补这个函数, 车俩可能只是在某一个时间端进行工作
+        pass
 
     def __repr__(self):
-        return "id: {0} location: {1} available_seats: {2} driven_distance: {3} unit_cost: {4} route: {5}". \
-            format(self.vehicle_id, self.location, self.available_seats, self.driven_distance, self.unit_cost, self.route)
+        return "id: {0} location: {1} available_seats: {2} service_driven_distance: {3} route: {4}". \
+            format(self.vehicle_id, self.location, self.available_seats, self.service_driven_distance, self.route)
 
     def __hash__(self):
-        return self.vehicle_id
+        return hash(self.vehicle_id)
 
     def __eq__(self, other):
-        return self.vehicle_id == other.vehicle_id
+        if not isinstance(other, self.__class__):
+            raise Exception("{0} is not {1}".format(other.__class__, self.__class__))
+        return isinstance(other, self.__class__) and self.vehicle_id == other.vehicle_id
 
 
-def generate_vehicles(network: Network) -> List[Vehicle]:
-    """
-    用于生成一组自己的车辆
-    :param network:
-    :return:
-    """
-    from setting import EXPERIMENTAL_MODE
-    from setting import VEHICLE_SPEED
-    from setting import VEHICLE_NUMBER
-    vehicles = []
-    Vehicle.set_average_speed(VEHICLE_SPEED)  # 初初始化车辆速度
-    locations = network.generate_random_vehicle_locations(VEHICLE_NUMBER)  # 得到车辆位置
-    if EXPERIMENTAL_MODE == "real":
-        from setting import VEHICLE_FUEL_COST_RATIO
-        from setting import FUEL_CONSUMPTION_DATA_FILE
-        import pandas as pd
-        car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
-        cars_info = car_fuel_consumption_info.sample(n=VEHICLE_NUMBER)
-        for vehicle_id in range(VEHICLE_NUMBER):
-            location = locations[vehicle_id]
-            car_info = cars_info.iloc[vehicle_id, :]
-            n_seats = int(car_info["seats"])
-            unit_cost = float(car_info["fuel_consumption"]) * VEHICLE_FUEL_COST_RATIO
-            vehicle = Vehicle(vehicle_id, location, n_seats, unit_cost)
-            vehicles.append(vehicle)
-    else:
-        from setting import UNIT_COSTS
-        from setting import N_SEATS
-        import numpy as np
-        unit_costs = np.random.choice(UNIT_COSTS, VEHICLE_NUMBER)
-        for vehicle_id in range(VEHICLE_NUMBER):
-            location = locations[vehicle_id]
-            n_seats = N_SEATS
-            unit_cost = unit_costs[vehicle_id]
-            vehicle = Vehicle(vehicle_id, location, n_seats, unit_cost)
-            vehicles.append(vehicle)
-    return vehicles
+def generate_real_vehicles(locations: List[VehicleLocation], vehicle_number: int) -> List[Vehicle]:
+    from setting import FUEL_CONSUMPTION_DATA_FILE
+    car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
+    cars_info = car_fuel_consumption_info.sample(n=vehicle_number)
+    seats_info = cars_info["seats"].values.astype(np.int)
+    unit_cost_info = cars_info["fuel_consumption"].values.astype(np.float) * VEHICLE_FUEL_COST_RATIO
+    return [Vehicle(vehicle_id, locations[vehicle_id], seats_info[vehicle_id], unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
+
+
+def generate_grid_vehicles(locations: List[VehicleLocation], vehicle_number: int) -> List[Vehicle]:
+    from setting import UNIT_COSTS
+    from setting import N_SEATS
+    unit_costs = np.random.choice(UNIT_COSTS, size=(vehicle_number,))
+    return [Vehicle(vehicle_id, locations[vehicle_id], N_SEATS, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]

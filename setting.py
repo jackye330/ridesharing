@@ -15,7 +15,7 @@ MILE_TO_KM = 1.609344
 MILE_TO_M = 1609.344
 SECOND_OF_DAY = 86_400  # 24 * 60 * 60 一天有多少秒
 
-# real 和 grid 实验都可以使用的数据 ######################################################################################################################
+# real_transport 和 grid_transport 实验都可以使用的数据 ######################################################################################################################
 # 实验得环境 为"REAL_TRANSPORT"表示真实的路网环境 为"GRID_TRANSPORT"表示虚拟网格环境
 REAL_TRANSPORT = "REAL_TRANSPORT"
 GRID_TRANSPORT = "GRID_TRANSPORT"
@@ -31,7 +31,7 @@ MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MAX_REQUEST_TIME 不可以超过 24 * 60 * 60 + 1.
-MIN_REQUEST_TIME, MAX_REQUEST_TIME = 1 * 60 * 60, 9 * 60 * 60
+MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 500
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 MILE_TO_KM * 12 / 3.6 m/s
@@ -39,12 +39,12 @@ VEHICLE_SPEED = MILE_TO_KM * 12 / 3.6
 # 投标策略 "ADDITIONAL_COST" 以成本量的增加量作为投标 "ADDITIONAL_PROFIT" 以利润的增加量作为投标量
 ADDITIONAL_COST_STRATEGY = "ADDITIONAL_COST_STRATEGY"
 ADDITIONAL_PROFIT_STRATEGY = "ADDITIONAL_PROFIT_STRATEGY"
-BIDDING_STRATEGY = ADDITIONAL_COST_STRATEGY
+BIDDING_STRATEGY = ADDITIONAL_PROFIT_STRATEGY
 # 路线规划的目标 "MINIMIZE_COST" 最小化成本 "MAXIMIZE_PROFIT" 最大化利润
 MINIMIZE_WAIT_TIME = "MINIMIZE_WAIT_TIME"
 MINIMIZE_COST = "MINIMIZE_COST"
 MAXIMIZE_PROFIT = "MAXIMIZE_PROFIT"
-ROUTE_PLANNING_GOAL = MINIMIZE_COST
+ROUTE_PLANNING_GOAL = MAXIMIZE_PROFIT
 # 路线规划的方案 "INSERTING" 新的订单起始点直接插入而不改变原有订单起始位置顺序  "RESCHEDULING" 原有订单的起始位置进行重排
 INSERTING = "INSERTING"
 RESCHEDULING = "RESCHEDULING"

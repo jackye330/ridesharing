@@ -2,133 +2,68 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/26
-from typing import List, Tuple, Set, Dict
-import numpy as np
+import time
+from typing import List, Set, NoReturn
 
-from agent.order import Order
+from agent.utility import VehicleType
 from agent.vehicle import Vehicle
+from algorithm.utility import Mechanism
+from env.network import Network
+from env.order import Order
+from utility import is_enough_small
 
 
-def orders_dispatch_with_sequence_auction(
-        shortest_distance: np.ndarray, shortest_path: np.ndarray, shortest_path_with_minute: np.ndarray,
-        adjacent_nodes: np.ndarray, orders: Set[Order], vehicles: List[Vehicle], current_time: int) \
-        -> Tuple[Set[Order], Dict[Vehicle, List[Tuple[Order, float]]], float, float, float, float, float, float]:
+class SecondPriceSequenceAuction(Mechanism):
     """
-    :param shortest_distance:
-    :param shortest_path:
-    :param shortest_path_with_minute:
-    :param adjacent_nodes:
-    :param orders:
-    :param vehicles:
-    :param current_time:
-    :return:
+    每一个时刻，将订单按照订单价格排序，然后按照每一个商品按照贯序拍卖的形式进行拍卖,
+    这种方式适合使用成本作为投标方式的拍卖
     """
-    # 对于每一个订单取距离最近的车分配，如果这个车的调度是可以满足条件的，而且容量是可以满足需求的
-    dispatched_orders = set()
-    payments = {}
-    social_welfare = 0.0
-    social_cost = 0.0
-    total_payment = 0.0
-    total_utility = 0.0
-    total_profit = 0.0
 
-    # 对于订单按照价值排序(按sw排序)
-    candidate_orders = list(sorted(orders, key=lambda _order: _order.trip_fare))
+    __slots__ = []
 
-    for order in candidate_orders:
+    def __init__(self):
+        super(SecondPriceSequenceAuction, self).__init__()
 
-        candidate_vehicles_bids = list()
+    def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
+        # 清空上一轮的结果
+        self.reset()
 
-        for vehicle in vehicles:
-            # 判断投标可行性 人数要满足条件 还有距离要可达
-            if order.n_riders > vehicle.n_seats:
-                continue
-            two_location_distance = shortest_distance[vehicle.location.osm_index, order.start_location.osm_index]
-            rest_of_time = order.max_wait_time + order.request_time - current_time
-            # 车处于两个节点中间
-            if vehicle.is_between == Vehicle.IS_BETWEEN_TWO_INDEX:
-                # 顺路或者不能反向行驶
-                if shortest_distance[vehicle.goal_index, order.start_location.osm_index] + \
-                        shortest_distance[vehicle.location.osm_index, vehicle.goal_index] - vehicle.between_distance < \
-                        two_location_distance + vehicle.between_distance or \
-                        shortest_distance[vehicle.goal_index, vehicle.location.osm_index] == np.inf:
-                            if shortest_distance[vehicle.goal_index, order.start_location.osm_index] + \
-                                    shortest_distance[
-                                        vehicle.location.osm_index, vehicle.goal_index] - vehicle.between_distance > \
-                                    rest_of_time * Vehicle.AVERAGE_SPEED:
-                                    continue
+        # 临时存放车辆信息
+        temp_vehicle_roue = {vehicle: vehicle.route for vehicle in vehicles}
+
+        t1 = time.clock()
+        order_by_fare_orders = sorted(orders, key=lambda _order: _order.order_fare)  # 按照订单的估值进行排序
+        for order in order_by_fare_orders:
+
+            t2 = time.clock()
+            order_bids = []
+            for vehicle in vehicles:
+                vehicle_info = VehicleType(vehicle.location, vehicle.available_seats, vehicle.unit_cost, vehicle.service_driven_distance, vehicle.vehicle_speed)
+                order_bid = vehicle.proxy_bidder.get_bid(vehicle_info, vehicle.route_planner, temp_vehicle_roue[vehicle], order, current_time, network)
+                if order_bid is not None and is_enough_small(order_bid.additional_cost, order.order_fare):
+                    order_bids.append((vehicle, order_bid))
+            self._bidding_time += (time.clock() - t2)
+
+            if len(order_bids) >= 1:
+                order_bids.sort(key=lambda x: x[1].additional_cost)
+                winner_vehicle, winner_bid = order_bids[0]  # 获胜车辆和与之对应的投标
+                if len(order_bids) > 1:
+                    _, max_loser_bid = order_bids[1]
                 else:
-                    if two_location_distance + vehicle.between_distance > rest_of_time * Vehicle.AVERAGE_SPEED:
-                        continue
-            else:
-                if two_location_distance > rest_of_time * Vehicle.AVERAGE_SPEED:
-                    continue
-
-            original_cost = vehicle.compute_cost(shortest_distance, vehicle.route_plan, current_time)  # 计算没有投标的时候的费用
-            current_cost, _ = vehicle.find_route_plan(shortest_distance, order, current_time)  # 计算已经添加这个订单之后的费用
-            additional_cost = current_cost - original_cost  # 计算费用的增加量
-
-            if 0 <= additional_cost <= order.trip_fare:
-                candidate_vehicles_bids.append((vehicle, additional_cost))
-
-        if len(candidate_vehicles_bids) == 0:
-            pass
-        else:
-            dispatched_orders.add(order)
-            candidate_vehicles_bids.sort(key=lambda bid: bid[1])
-            winner_vehicle = candidate_vehicles_bids[0][0]
-            winner_vehicle.n_seats -= order.n_riders
-            _, route_plan = winner_vehicle.find_route_plan(shortest_distance, order, current_time)
-            winner_vehicle.route_plan = route_plan
-            order.belong_to_vehicle = winner_vehicle
-
-            if len(candidate_vehicles_bids) == 1:
-                payment = candidate_vehicles_bids[0][1]
-            else:
-                payment = candidate_vehicles_bids[1][1]  # 次价支付
-
-            if winner_vehicle not in payments:
-                payments[winner_vehicle] = [(order, payment)]
-            else:
-                payments[winner_vehicle].append((order, payment))
-
-            social_welfare += (order.trip_fare - candidate_vehicles_bids[0][1])  # order.trip_fare - additional_cost
-            social_cost += candidate_vehicles_bids[0][1]
-            total_payment += payment
-            total_utility += (payment - candidate_vehicles_bids[0][1])
-            total_profit += (order.trip_fare - payment)
-
-    vehicles.sort(key=lambda v: v.vehicle_id)
-    form_location = {}
-    for vehicle in vehicles:
-        form_location[vehicle] = vehicle.location.osm_index
-    # 车辆更新位置
-    for vehicle in vehicles:
-        # # 未激活车辆位置不变
-        # if vehicle.activated == Vehicle.NEGATIVE:
-        #     continue
-        if vehicle not in payments:
-            # 没有在胜者集合的而且没有路线目标的随机更新下一个位置
-            if vehicle.status == Vehicle.WITHOUT_MISSION_STATUS:
-                vehicle.update_random_location(shortest_distance, shortest_path_with_minute, adjacent_nodes)
-            else:
-                vehicle.update_order_location(shortest_distance, shortest_path)
-            continue
-        # 如果是胜者者的话就要决定最优路线而且还要更新订单的状态
-        vehicle.update_order_location(shortest_distance, shortest_path)
-    for vehicle in vehicles:
-        if form_location[vehicle] == vehicle.location.osm_index:
-            print("位置没变", vehicle.vehicle_id, vehicle.location.osm_index, vehicle.goal_index, vehicle.route_plan)
-    empty_vehicle_num = 0
-    for vehicle in vehicles:
-        # 统计空闲车的数量
-        if vehicle.status == vehicle.WITHOUT_MISSION_STATUS:
-            empty_vehicle_num += 1
-    empty_vehicle_rate = empty_vehicle_num / len(vehicles)
-    return dispatched_orders, payments, social_welfare, social_cost, total_payment, total_utility, total_profit, empty_vehicle_rate
+                    max_loser_bid = winner_bid
+                driver_reward = max_loser_bid.additional_cost  # 平台支付给司机的回报
+                driver_profit = driver_reward - winner_bid.additional_cost
+                self._dispatched_vehicles.add(winner_vehicle)
+                self._dispatched_orders.add(order)
+                self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_profit)
+                self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
+                self._social_welfare += (order.order_fare - winner_bid.additional_cost)
+                self._social_cost += winner_bid.additional_cost
+                self._total_driver_rewards += driver_reward
+                self._total_driver_payoffs += driver_profit
+                self._platform_profit += (order.order_fare - driver_reward)
+                temp_vehicle_roue[winner_vehicle] = winner_bid.bid_route  # 车辆信息暂时更新
+        self._running_time += (time.clock() - t1 - self._bidding_time)
 
 
-if __name__ == '__main__':
-    # TODO：测试algorithm的功能
-    pass
-
+second_price_sequence_auction = SecondPriceSequenceAuction()

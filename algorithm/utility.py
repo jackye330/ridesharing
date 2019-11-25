@@ -11,7 +11,7 @@ from env.location import OrderLocation
 from env.network import Network
 from env.order import Order
 
-__all__ = ["DispatchingMethod"]
+__all__ = ["Mechanism"]
 
 
 class DispatchedResult:
@@ -48,7 +48,7 @@ class DispatchedResult:
         self._driver_route = route
 
 
-class DispatchingMethod:
+class Mechanism:
     """
     分配方法类
     dispatched_orders: 已经得到分配的订单
