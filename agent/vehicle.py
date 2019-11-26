@@ -241,8 +241,8 @@ class Vehicle:
                     belong_order.set_pick_status(self.service_driven_distance, int(now_time))  # 更新当前订单的接送行驶距离
                     self.decrease_available_seats(belong_order.n_riders)
                 if isinstance(order_location, DropLocation):
-                    self.increase_available_seats(belong_order.n_riders)
                     belong_order.set_drop_status(self.service_driven_distance, int(now_time))
+                    self.increase_available_seats(belong_order.n_riders)
                     self._finish_orders_number += 1
                     _finish_orders.append(belong_order)
 

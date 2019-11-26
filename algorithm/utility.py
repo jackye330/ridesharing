@@ -3,9 +3,9 @@
 # author : zlq16
 # date   : 2019/10/25
 from collections import defaultdict
-from typing import List, Set, NoReturn
+from typing import List, Set, NoReturn, Dict
 
-from setting import FLOAT_ZERO
+from setting import FLOAT_ZERO, INT_ZERO
 from agent.vehicle import Vehicle
 from env.location import OrderLocation
 from env.network import Network
@@ -18,10 +18,10 @@ class DispatchedResult:
     __slots__ = ["_orders", "_driver_route", "_driver_reward", "_driver_profit"]
 
     def __init__(self):
-        self._orders = []
+        self._orders: List[Order] = list()
         self._driver_route = None
-        self._driver_reward = FLOAT_ZERO
-        self._driver_profit = FLOAT_ZERO
+        self._driver_reward: float = FLOAT_ZERO
+        self._driver_profit: float = FLOAT_ZERO
 
     @property
     def orders(self) -> List[Order]:
@@ -51,6 +51,7 @@ class DispatchedResult:
 class Mechanism:
     """
     分配方法类
+    供需比 feasible_vehicle_number / feasible_order_number
     dispatched_orders: 已经得到分配的订单
     dispatched_vehicles: 订单分发中获得订单的车辆集合
     dispatched_result: 分发结果, 包括车辆获得哪些订单和回报
@@ -62,19 +63,29 @@ class Mechanism:
     total_driver_payoffs: 分配订单车辆的总效用和
     platform_profit: 平台在此轮运行中的收益
     """
-    __slots__ = ["_dispatched_orders", "_dispatched_vehicles", "_dispatched_results", "_social_welfare", "_social_cost", "_total_driver_rewards", "_total_driver_payoffs", "_platform_profit", "_bidding_time", "_running_time"]
+    __slots__ = [
+        "_dispatched_orders",
+        "_dispatched_vehicles",
+        "_dispatched_results",
+        "_social_welfare",
+        "_social_cost",
+        "_total_driver_rewards",
+        "_total_driver_payoffs",
+        "_platform_profit",
+        "_bidding_time",
+        "_running_time"]
 
     def __init__(self):
-        self._dispatched_vehicles = set()
-        self._dispatched_orders = set()
-        self._dispatched_results = defaultdict(DispatchedResult)
-        self._social_welfare = FLOAT_ZERO
-        self._social_cost = FLOAT_ZERO
-        self._total_driver_rewards = FLOAT_ZERO
-        self._total_driver_payoffs = FLOAT_ZERO
-        self._platform_profit = FLOAT_ZERO
-        self._bidding_time = FLOAT_ZERO
-        self._running_time = FLOAT_ZERO
+        self._dispatched_vehicles: Set[Vehicle] = set()
+        self._dispatched_orders: Set[Order] = set()
+        self._dispatched_results: defaultdict = defaultdict(DispatchedResult)
+        self._social_welfare: float = FLOAT_ZERO
+        self._social_cost: float = FLOAT_ZERO
+        self._total_driver_rewards: float = FLOAT_ZERO
+        self._total_driver_payoffs: float = FLOAT_ZERO
+        self._platform_profit: float = FLOAT_ZERO
+        self._bidding_time: float = FLOAT_ZERO  # 这个是比较细化的时间
+        self._running_time: float = FLOAT_ZERO  # 这个是比较细化的时间
 
     def reset(self):
         self._dispatched_vehicles.clear()
@@ -89,7 +100,7 @@ class Mechanism:
         self._running_time = FLOAT_ZERO
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
-        raise NotImplementedError
+        raise NotImplementedError  # 后续代码还需要自己实现
 
     @property
     def dispatched_vehicles(self) -> Set[Vehicle]:

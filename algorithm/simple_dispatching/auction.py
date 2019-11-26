@@ -73,8 +73,7 @@ class VCGMechanism(Mechanism):
         self._social_welfare += social_welfare
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
-        # 清空上一轮的结果
-        self.reset()
+        self.reset()  # 清空结果
 
         # 构建图
         t1 = time.clock()
@@ -156,8 +155,7 @@ class GreedyMechanism(Mechanism):
             self._platform_profit += (corresponding_order.order_fare - driver_reward)
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
-        # 清空上一轮的结果
-        self.reset()
+        self.reset()  # 清空结果
 
         # 构建资源池
         t1 = time.clock()
@@ -168,8 +166,6 @@ class GreedyMechanism(Mechanism):
         match_pairs = self._order_matching(pool)  # 胜者决定
         self._driver_pricing(pool, match_pairs)  # 司机定价并记录结果
         self._running_time += (time.clock() - t1 - self._bidding_time)
-
-        print("self.bidding_time", self._bidding_time)
 
 
 # 对外的接口

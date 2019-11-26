@@ -68,6 +68,10 @@ class AdditionalCostBidder(ProxyBidder):
 
     def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner,  old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
         old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
+        ##############################################
+        if not old_route_info.is_feasible:
+            raise Exception("存在问题，路径规划")
+        #######################################################
         old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
         order_bids = dict()
         for order in orders:

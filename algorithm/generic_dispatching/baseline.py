@@ -28,8 +28,7 @@ class NearestVehicleDispatching(Mechanism):
         super(NearestVehicleDispatching, self).__init__()
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
-        # 清空上一轮的结果
-        self.reset()
+        self.reset()  # 清空结果
 
         # 临时存放车辆信息
         temp_vehicle_roue = {vehicle: vehicle.route for vehicle in vehicles}
@@ -42,9 +41,9 @@ class NearestVehicleDispatching(Mechanism):
             for vehicle in vehicles:
                 if pre_check_need_to_planning(vehicle.vehicle_type, order, current_time, network):
                     vehicle_distances.append((vehicle, network.compute_vehicle_to_order_distance(vehicle.location, order.pick_location)))
-
             self._bidding_time += (time.clock() - t2)
-            vehicle_distances.sort(key=lambda x: x[1])  # 接送距离越小越好
+
+            vehicle_distances.sort(key=lambda x: x[1])  # 接的距离越小越好
             for vehicle, distance in vehicle_distances:
                 planing_result = vehicle.route_planner.planning(vehicle.vehicle_type, temp_vehicle_roue[vehicle], order, current_time, network)
                 if not planing_result.is_feasible:
@@ -98,6 +97,7 @@ class SPARPMechanism(Mechanism):
 
             if len(order_bids) < 1:  # 压根没有人投标
                 continue
+
             order_bids.sort(key=lambda x: x[1].bid_value, reverse=True)  # 按照社会福利排序
             reverse_price = order.order_fare - max_cost  # 平台的保留价格
             winner_vehicle, winner_bid = order_bids[0]  # 胜利司机与其相对应的投标

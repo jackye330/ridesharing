@@ -55,7 +55,7 @@ VCG_MECHANISM = "VCG_MECHANISM"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "GM_MECHANISM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP_MECHANISM"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SEQUENCE_AUCTION"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = GM_MECHANISM
+DISPATCHING_METHOD = VCG_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点

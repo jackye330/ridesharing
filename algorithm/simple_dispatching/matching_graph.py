@@ -11,7 +11,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from agent.vehicle import Vehicle
-from setting import FLOAT_ZERO, VALUE_EPS
+from setting import FLOAT_ZERO, VALUE_EPS, INT_ZERO
 from env.order import Order
 
 __all__ = ["BipartiteGraph", "MaximumWeightMatchingGraph", "MarketClearingMatchingGraph"]
@@ -34,7 +34,7 @@ class BipartiteGraph:
         self.vehicle_number = len(feasible_vehicles)
         self.order_number = len(feasible_orders)
         self.pair_social_welfare_matrix = np.zeros(shape=(self.vehicle_number, self.order_number))
-        self.deny_vehicle_index = -1
+        self.deny_vehicle_index = -2  # 初始化没有该禁止车辆
         self.backup_sw_line = None
         self.bids = None
 
@@ -59,7 +59,7 @@ class BipartiteGraph:
         """
         self.pair_social_welfare_matrix[self.deny_vehicle_index, :] = self.backup_sw_line
         self.backup_sw_line = None
-        self.deny_vehicle_index = -1
+        self.deny_vehicle_index = -2
 
     def add_edge(self, vehicle: Vehicle, order: Order, pair_social_welfare: float):
         self.vehicle_link_orders[vehicle].add(order)
@@ -134,11 +134,12 @@ class MaximumWeightMatchingGraph(BipartiteGraph):
         match_pairs = []
         if return_match:
             for vehicle_index, order_index in zip(row_index, col_index):
-                if vehicle_index != self.deny_vehicle_index:
-                    vehicle = self.index2vehicle[vehicle_index]
-                    order = self.index2order[order_index]
-                    if order in self.vehicle_link_orders[vehicle]:
-                        match_pairs.append((vehicle, order))
+                if vehicle_index == self.deny_vehicle_index:
+                    continue
+                vehicle = self.index2vehicle[vehicle_index]
+                order = self.index2order[order_index]
+                if order in self.vehicle_link_orders[vehicle]:
+                    match_pairs.append((vehicle, order))
         return social_welfare, match_pairs
 
 
@@ -150,7 +151,7 @@ class MarketClearingMatchingGraph(BipartiteGraph):
 
     def __init__(self, feasible_vehicles: Set[Vehicle], feasible_orders: Set[Order]):
         super(MarketClearingMatchingGraph, self).__init__(feasible_vehicles, feasible_orders)
-        self.epsilon = 0.001
+        self.epsilon = 0.1  # TODO 这递增值需要修改, 这个对于算法性能有很大的影响
 
     def _is_prefect_matching(self, orders_matches: List[array]):
         m_v = np.ones(shape=(self.vehicle_number,), dtype=np.int16) * -1
@@ -158,7 +159,7 @@ class MarketClearingMatchingGraph(BipartiteGraph):
         v_v = np.zeros(shape=(self.vehicle_number,), dtype=np.bool)
 
         def _greedy_matching() -> int:
-            _cnt = 0
+            _cnt = INT_ZERO
             for _order_index in range(self.order_number):
                 if m_o[_order_index] == -1:
                     for _vehicle_index in orders_matches[_order_index]:
@@ -187,16 +188,10 @@ class MarketClearingMatchingGraph(BipartiteGraph):
                 if _find_augmenting_path(order_index):
                     cnt += 1
 
-        if self.deny_vehicle_index == -1:
-            if cnt == min(self.vehicle_number, self.order_number):
-                return True, m_o
-            else:
-                return False, None
+        if cnt == min(self.vehicle_number, self.order_number):
+            return True, m_o
         else:
-            if cnt == min(self.order_number, self.vehicle_number - 1):
-                return True, m_o
-            else:
-                return False, None
+            return False, None
 
     def _get_match_result(self, payoff: np.ndarray):
         vehicle_bid_cnt = defaultdict(int)  # 表示车辆被投标的次数
@@ -205,9 +200,8 @@ class MarketClearingMatchingGraph(BipartiteGraph):
             order_array = payoff[order_index, :]
             vehicle_indexes = np.argwhere(np.abs(order_array - np.amax(order_array)) <= VALUE_EPS).flatten()
             for vehicle_index in vehicle_indexes:
-                if vehicle_index != self.deny_vehicle_index:
-                    orders_matches[order_index].append(vehicle_index)
-                    vehicle_bid_cnt[vehicle_index] += 1
+                orders_matches[order_index].append(vehicle_index)
+                vehicle_bid_cnt[vehicle_index] += 1
         return vehicle_bid_cnt, orders_matches
 
     def maximal_weight_matching(self, return_match=False) -> Tuple[float, List[Tuple[Vehicle, Order]]]:
@@ -218,11 +212,12 @@ class MarketClearingMatchingGraph(BipartiteGraph):
             vehicle_bid_cnt, orders_matches = self._get_match_result(payoff)
             is_feasible, prefect_matching = self._is_prefect_matching(orders_matches)
             if is_feasible:
-                social_welfare = FLOAT_ZERO
+                social_welfare = sw_matrix[range(len(prefect_matching)), prefect_matching].sum()
                 match_pairs = []
                 if return_match:
                     for order_index, vehicle_index in enumerate(prefect_matching):
-                        social_welfare += self.pair_social_welfare_matrix[vehicle_index, order_index]
+                        if vehicle_index == self.deny_vehicle_index:
+                            continue
                         vehicle = self.index2vehicle[vehicle_index]
                         order = self.index2order[order_index]
                         if order in self.vehicle_link_orders[vehicle]:
