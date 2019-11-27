@@ -1,4 +1,5 @@
 /data
+/preprocess/raw_data
 /result
 /test
 /.idea

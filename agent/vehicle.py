@@ -3,7 +3,6 @@
 # author : zlq16
 # date   : 2019/10/22
 from typing import List, NoReturn, Dict, Set
-
 import numpy as np
 import pandas as pd
 
@@ -16,7 +15,7 @@ from env.location import DropLocation, PickLocation, VehicleLocation, OrderLocat
 from env.network import Network
 from env.order import Order
 
-__all__ = ["Vehicle", "generate_grid_vehicles", "generate_real_vehicles"]
+__all__ = ["Vehicle", "generate_grid_vehicles_data", "generate_real_vehicles_data"]
 
 
 class Vehicle:
@@ -72,23 +71,42 @@ class Vehicle:
         cls.generate_vehicles_function = function
 
     @classmethod
-    def generate_vehicles(cls, vehicle_number: int, vehicle_speed: float, time_slot: int, proxy_bidder: ProxyBidder,  route_planner: RoutePlanner, network: Network) -> List:
+    def generate_vehicles_data(cls, vehicle_number: int, network: Network, output_file: str):
         """
-        用于生成一组自己的车辆
-        :param vehicle_number: 车辆数目
+        用于生成用于模拟的文件，用于
+        :param vehicle_number:
+        :param network:
+        :param output_file:
+        :return:
+        """
+        locations = network.generate_random_locations(vehicle_number, VehicleLocation)  # 得到车辆位置
+        with open(output_file, "w") as file:
+            file.write("location_index,seats,unit_cost\n")
+            for line in cls.generate_vehicles_function(locations, vehicle_number):  # 得到很多的车辆类
+                file.write(",".join(map(str, line)) + "\n")
+
+    @classmethod
+    def load_vehicles_data(cls, vehicle_speed: float, time_slot: int, proxy_bidder: ProxyBidder, route_planner: RoutePlanner, input_file) -> List:
+        """
+        用于导入已经生成的车辆数据，并加工用于模拟
         :param vehicle_speed: 车辆速度
         :param time_slot: 表示
         :param proxy_bidder: 代理投标者
         :param route_planner: 路线规划器
-        :param network: 路网
+        :param input_file: 路网
         :return:
         """
         cls.set_average_speed(vehicle_speed)  # 初初始化车辆速度
         cls.set_could_drive_distance(vehicle_speed * time_slot)  # 初始化车辆的行驶
         cls.set_proxy_bidder(proxy_bidder)
         cls.set_route_planner(route_planner)
-        locations = network.generate_random_locations(vehicle_number, VehicleLocation)  # 得到车辆位置
-        return cls.generate_vehicles_function(locations, vehicle_number)
+        vehicle_raw_data = pd.read_csv(input_file)
+        vehicle_number = vehicle_raw_data.shape[0]
+        vehicles = []
+        for vehicle_id in range(vehicle_number):
+            each_vehicle_data = vehicle_raw_data.iloc[vehicle_id, :]
+            vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), int(each_vehicle_data["seats"]), each_vehicle_data["unit_cost"]))
+        return vehicles
 
     @property
     def vehicle_id(self) -> int:
@@ -186,6 +204,7 @@ class Vehicle:
     def earn_profit(self) -> float:
         return self._earn_profit
 
+    @property
     def have_service_mission(self) -> bool:
         """
         返回当前车辆是否有服务订单的任务在身
@@ -280,8 +299,8 @@ class Vehicle:
         pass
 
     def __repr__(self):
-        return "id: {0} location: {1} available_seats: {2} service_driven_distance: {3} route: {4}". \
-            format(self.vehicle_id, self.location, self.available_seats, self.service_driven_distance, self.route)
+        return "id: {0} location: {1} available_seats: {2} unit_cost: {3} route: {4}". \
+            format(self.vehicle_id, self.location, self.available_seats, self.unit_cost, self.route)
 
     def __hash__(self):
         return hash(self.vehicle_id)
@@ -292,17 +311,17 @@ class Vehicle:
         return isinstance(other, self.__class__) and self.vehicle_id == other.vehicle_id
 
 
-def generate_real_vehicles(locations: List[VehicleLocation], vehicle_number: int) -> List[Vehicle]:
+def generate_real_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
     from setting import FUEL_CONSUMPTION_DATA_FILE
     car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
     cars_info = car_fuel_consumption_info.sample(n=vehicle_number)
     seats_info = cars_info["seats"].values.astype(np.int)
     unit_cost_info = cars_info["fuel_consumption"].values.astype(np.float) * VEHICLE_FUEL_COST_RATIO
-    return [Vehicle(vehicle_id, locations[vehicle_id], seats_info[vehicle_id], unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
+    return [(locations[vehicle_id].osm_index, seats_info[vehicle_id], unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
 
 
-def generate_grid_vehicles(locations: List[VehicleLocation], vehicle_number: int) -> List[Vehicle]:
+def generate_grid_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
     from setting import UNIT_COSTS
     from setting import N_SEATS
     unit_costs = np.random.choice(UNIT_COSTS, size=(vehicle_number,))
-    return [Vehicle(vehicle_id, locations[vehicle_id], N_SEATS, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]
+    return [(locations[vehicle_id].osm_index, N_SEATS, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]

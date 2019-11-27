@@ -23,14 +23,14 @@ EXPERIMENTAL_MODE = REAL_TRANSPORT
 # 一组参数实验的重复次数
 MAX_REPEATS = 10
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
-TIME_SLOT = 30
+TIME_SLOT = 20
 # 距离精度误差, 表示一个车辆到某一个点的距离小于这一个数, 那么就默认这个车已经到这个点上了 单位 m. 如果是实际的路网一般取10.0m, 如果是网格环境一般取0.0.
 DISTANCE_EPS = 10.0
 # 模拟天数的最小值/最大值，如果是网格环境默认为0, 如果是网格环境默认为1.
 MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
-# 如果是网格环境 MAX_REQUEST_TIME 不可以超过 24 * 60 * 60 + 1.
+# 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
 MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 500
@@ -51,15 +51,15 @@ RESCHEDULING = "RESCHEDULING"
 ROUTE_PLANNING_METHOD = INSERTING
 # 平台使用的订单分发方式
 NEAREST_DISPATCHING = "NEAREST_DISPATCHING"  # 通用的最近车辆分配算法
-VCG_MECHANISM = "VCG_MECHANISM"  # vcg 机制 这是一个简单的分配机制
-GM_MECHANISM = "GM_MECHANISM"  # gm 机制 这是一个简单的分配机制
-SPARP_MECHANISM = "SPARP_MECHANISM"  # SPARP 机制 这是一个通用分配机制
-SEQUENCE_AUCTION = "SEQUENCE_AUCTION"  # 贯序拍卖机制 这是一个通用分配机制
+VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
+GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
+SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
+SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
 DISPATCHING_METHOD = VCG_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
-GEO_NAME = "Manhattan"
+GEO_NAME = "HaiKou"
 GEO_DATA_FILE = {
     "base_folder": "./data/{0}/network_data".format(GEO_NAME),
     "graph_file": "{0}.graphml".format(GEO_NAME),
@@ -90,11 +90,9 @@ GRAPH_SIZE = 100
 # 每一个网格的大小
 GRID_SIZE = 1.0
 # 每一个时间槽我们的订单数目我们按照正态分布生成
-MU, SIGMA = 1000, 100
+MU, SIGMA = 100, 10
 # 订单的等待时间
 MIN_WAIT_TIME, MAX_WAIT_TIME = 10, 100
-# 表示一个实验最大的模拟次数
-MAX_SIMULATE_TIME = 500
 # 车辆成本单位成本可选范围 每米司机要花费的钱
 UNIT_COSTS = [1.2, 1.3, 1.4, 1.5]
 # 订单的单位预先价格 每米乘客要花费的钱
@@ -103,3 +101,8 @@ UNIT_FARE = 2.5
 N_SEATS = 4
 # 订单的乘客数目
 MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
+
+# 与环境创建相关的数据 #################################################################
+INPUT_VEHICLES_DATA_FILES = ["./data/input/vehicles_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
+INPUT_ORDERS_DATA_FILES = ["./data/input/orders_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
+SAVE_RESULT_FILES = ["./result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
