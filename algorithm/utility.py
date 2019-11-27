@@ -3,25 +3,25 @@
 # author : zlq16
 # date   : 2019/10/25
 from collections import defaultdict
-from typing import List, Set, NoReturn, Dict
+from typing import List, Set, NoReturn
 
-from setting import FLOAT_ZERO, INT_ZERO
 from agent.vehicle import Vehicle
 from env.location import OrderLocation
 from env.network import Network
 from env.order import Order
+from setting import FLOAT_ZERO
 
 __all__ = ["Mechanism"]
 
 
 class DispatchedResult:
-    __slots__ = ["_orders", "_driver_route", "_driver_reward", "_driver_profit"]
+    __slots__ = ["_orders", "_driver_route", "_driver_reward", "_driver_payoff"]
 
     def __init__(self):
         self._orders: List[Order] = list()
         self._driver_route = None
         self._driver_reward: float = FLOAT_ZERO
-        self._driver_profit: float = FLOAT_ZERO
+        self._driver_payoff: float = FLOAT_ZERO
 
     @property
     def orders(self) -> List[Order]:
@@ -36,13 +36,13 @@ class DispatchedResult:
         return self._driver_reward
 
     @property
-    def driver_profit(self) -> float:
-        return self._driver_profit
+    def driver_payoff(self) -> float:
+        return self._driver_payoff
 
-    def add_order(self, order: Order, reward: float, profit: float):
+    def add_order(self, order: Order, reward: float, payoff: float):
         self._orders.append(order)
         self._driver_reward += reward
-        self._driver_profit += profit
+        self._driver_payoff += payoff
 
     def set_route(self, route: List[OrderLocation]):
         self._driver_route = route

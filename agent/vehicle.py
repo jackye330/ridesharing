@@ -30,7 +30,7 @@ class Vehicle:
     service_driven_distance: 车辆为了服务行驶的距离
     is_activated: 车辆是否已经激活
     """
-    __slots__ = ["_vehicle_id", "_is_activated", "_route",  "_vehicle_type", "_finish_orders_number", "_earn_reward", "_earn_profit"]
+    __slots__ = ["_vehicle_id", "_is_activated", "_route",  "_vehicle_type", "_finish_orders_number", "_earn_reward", "_earn_payoff"]
     generate_vehicles_function = None  # 车辆生成函数
     proxy_bidder: ProxyBidder = None  # 车辆的代理投标者
     route_planner: RoutePlanner = None  # 车辆的路线规划器
@@ -48,7 +48,7 @@ class Vehicle:
         )
         self._finish_orders_number: int = INT_ZERO
         self._earn_reward: float = FLOAT_ZERO
-        self._earn_profit: float = FLOAT_ZERO
+        self._earn_payoff: float = FLOAT_ZERO
 
     @staticmethod
     def set_average_speed(average_speed: float) -> NoReturn:
@@ -202,7 +202,7 @@ class Vehicle:
 
     @property
     def earn_profit(self) -> float:
-        return self._earn_profit
+        return self._earn_payoff
 
     @property
     def have_service_mission(self) -> bool:
@@ -282,7 +282,7 @@ class Vehicle:
         self._earn_reward += reward
 
     def increase_earn_profit(self, profit: float):
-        self._earn_profit += profit
+        self._earn_payoff += profit
 
     def increase_service_distance(self, additional_distance: float) -> NoReturn:
         self._vehicle_type.service_driven_distance += additional_distance

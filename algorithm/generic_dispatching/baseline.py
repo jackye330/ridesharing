@@ -39,7 +39,7 @@ class NearestVehicleDispatching(Mechanism):
             t2 = time.clock()
             vehicle_distances: List[Tuple[Vehicle, float]] = list()
             for vehicle in vehicles:
-                if pre_check_need_to_planning(vehicle.vehicle_type, order, current_time, network):
+                if pre_check_need_to_planning(vehicle.vehicle_type, order, current_time, network):  # 只记录了合理的车辆而不合理的都没有进行记录
                     vehicle_distances.append((vehicle, network.compute_vehicle_to_order_distance(vehicle.location, order.pick_location)))
             self._bidding_time += (time.clock() - t2)
 
@@ -107,21 +107,21 @@ class SPARPMechanism(Mechanism):
                 if len(order_bids) > 1:
                     _, max_loser_bid = order_bids[1]
                     driver_payment = max_loser_bid.bid_value  # 司机支付给平台的钱
-                    if not is_enough_small(FLOAT_ZERO, driver_payment):
+                    if not is_enough_small(FLOAT_ZERO, driver_payment):  # TODO 这个原始论文存在问题，不应该是driver payment < 0 才做这个事情， 还有reverse price 还有小于0的情况，原始论文也是没有考虑的
                         driver_payment = reverse_price
                 else:
                     driver_payment = FLOAT_ZERO  # 司机无法给平台支付
                 additional_cost = winner_bid.additional_cost  # 司机完成任务成本
                 driver_reward = (pair_social_welfare + additional_cost) - driver_payment  # 司机的收入
-                driver_profit = driver_reward - additional_cost   # 司机的利润
+                driver_payoff = driver_reward - additional_cost   # 司机的利润
                 self._dispatched_vehicles.add(winner_vehicle)
                 self._dispatched_orders.add(order)
-                self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_profit)
+                self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_payoff)
                 self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
                 self._social_welfare += pair_social_welfare
                 self._social_cost += additional_cost
                 self._total_driver_rewards += driver_reward
-                self._total_driver_payoffs += driver_profit
+                self._total_driver_payoffs += driver_payoff
                 self._platform_profit += driver_payment
                 temp_vehicle_roue[winner_vehicle] = winner_bid.bid_route  # 车辆信息暂时更新
 

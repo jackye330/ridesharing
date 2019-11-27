@@ -201,6 +201,6 @@ class ReschedulingPlanner(RoutePlanner):
             v_loc: VehicleLocation = vehicle_type.location
             for new_route, new_route_info in _recursion(list(), _generate_remain_loc_list(), vehicle_type.available_seats, vehicle_type.service_driven_distance):
                 self._optimizer.optimize(new_route, new_route_info, unit_cost)
-                corresponding_optimal_cost = min(new_route_info.route_cost, corresponding_optimal_cost)
+                corresponding_optimal_cost = min(self._optimizer.corresponding_optimal_cost, corresponding_optimal_cost)
 
         return super(ReschedulingPlanner, self).summary_planning_result()

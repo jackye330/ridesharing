@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # Comprehensive_fuel_consumption 综合油耗
 
 
-raw_data = pd.read_csv("../data/raw_data/vehicle_fuel_consumption_info.csv", error_bad_lines=False)
+raw_data = pd.read_csv("./raw_data/vehicle_fuel_consumption_info.csv", error_bad_lines=False)
 print(raw_data.shape)
 export_data = raw_data[raw_data["车辆型号"] != "NULL"]
 export_data = export_data[export_data["生产企业"] != "NULL"]
@@ -33,10 +33,10 @@ export_data = export_data[export_data["市区油耗"] != 0]
 export_data = export_data[export_data["综合油耗"] != 0]
 
 print(export_data.shape)
-export_data.to_csv("../data/raw_data/temp/new_fuel_consumption_info.csv", index=False)
+export_data.to_csv("./raw_data/temp/new_fuel_consumption_info.csv", index=False)
 
 # 添加座位信息
-car_info = pd.read_csv("../data/raw_data/temp/new_fuel_consumption_info.csv", encoding="gb18030")
+car_info = pd.read_csv("./raw_data/temp/new_fuel_consumption_info.csv", encoding="gb18030")
 car_info = car_info[car_info["fuel_consumption"] >= 4.1]
 n = car_info.shape[0]
 car_info = car_info.sort_values(by="pair_social_welfare")
@@ -45,5 +45,5 @@ car_info["seats"] = seats
 car_info["pair_social_welfare"].hist()
 plt.show()
 # car_info[car_info["fuel"]]
-car_info.to_csv("../data/raw_data/vehicle_data/fuel_consumption_and_seats.csv", index=False)
+car_info.to_csv("./raw_data/vehicle_data/fuel_consumption_and_seats.csv", index=False)
 

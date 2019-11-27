@@ -104,6 +104,7 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
         return RouteInfo(True, FLOAT_ZERO, dict())
     old_dists: float = vehicle_type.service_driven_distance
     cur_dists: float = vehicle_type.service_driven_distance
+    cur_seats: int = vehicle_type.available_seats
     avg_speed: float = vehicle_type.vehicle_speed
     v_loc: VehicleLocation = vehicle_type.location
 
@@ -113,6 +114,9 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
         cur_dists += (network.get_shortest_distance(v_loc, route[i]) if i == FIRST_INDEX else network.get_shortest_distance(route[i - 1], route[i]))
         order: Order = route[i].belong_order
         if isinstance(route[i], PickLocation):
+            cur_seats -= order.n_riders
+            if cur_seats < 0:  # 座位数目是不可行的
+                break
             # 计算接送时间，判断是否可以接到订单
             upper_time = order.request_time + order.wait_time - current_time
             if network.is_smaller_bound_distance(cur_dists - old_dists, avg_speed * upper_time):  # 计算到达时间是否超出于其的要求
@@ -120,6 +124,7 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             else:  # 无法满足最大等待时间
                 break
         else:
+            cur_seats += order.n_riders
             # 计算绕路比，判断绕路比是否可以满足要求
             real_detour_dist = cur_dists - (pick_up_dists_dict[order] if order in pick_up_dists_dict else order.pick_up_distance) - order.order_distance  # 计算绕路比距离
             if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, order.detour_distance):

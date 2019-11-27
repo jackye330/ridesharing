@@ -53,15 +53,15 @@ class SecondPriceSequenceAuction(Mechanism):
 
             additional_cost = winner_bid.additional_cost
             driver_reward = max_loser_bid.additional_cost  # 平台支付给司机的回报
-            driver_profit = driver_reward - additional_cost
+            driver_payoff = driver_reward - additional_cost
             self._dispatched_vehicles.add(winner_vehicle)
             self._dispatched_orders.add(order)
-            self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_profit)
+            self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
             self._social_welfare += (order.order_fare - additional_cost)
             self._social_cost += additional_cost
             self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_profit
+            self._total_driver_payoffs += driver_payoff
             self._platform_profit += (order.order_fare - driver_reward)
             temp_vehicle_roue[winner_vehicle] = winner_bid.bid_route  # 车辆信息暂时更新
 

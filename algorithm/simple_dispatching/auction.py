@@ -59,16 +59,16 @@ class VCGMechanism(Mechanism):
             winner_bid = bipartite_graph.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
             additional_cost = winner_bid.additional_cost
             driver_reward = min(additional_cost + (social_welfare - social_welfare_without_winner), corresponding_order.order_fare)
-            driver_profit = driver_reward - additional_cost
+            driver_payoff = driver_reward - additional_cost
 
             # 保存结果
             self._dispatched_vehicles.add(winner_vehicle)
             self._dispatched_orders.add(corresponding_order)
-            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_profit)
+            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
             self._social_cost += additional_cost
             self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_profit
+            self._total_driver_payoffs += driver_payoff
             self._platform_profit += (corresponding_order.order_fare - driver_reward)
         self._social_welfare += social_welfare
 
@@ -143,15 +143,15 @@ class GreedyMechanism(Mechanism):
                 if corresponding_order == dispatched_order:  # 循环终止条件
                     break
             driver_reward = min(corresponding_order.order_fare, driver_reward)
-            driver_profit = driver_reward - winner_bid.additional_cost
+            driver_payoff = driver_reward - winner_bid.additional_cost
 
             # 保存结果
             self._social_welfare += (corresponding_order.order_fare - winner_bid.additional_cost)
             self._social_cost += winner_bid.additional_cost
-            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_profit)
+            self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
             self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_profit
+            self._total_driver_payoffs += driver_payoff
             self._platform_profit += (corresponding_order.order_fare - driver_reward)
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:

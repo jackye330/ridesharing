@@ -122,7 +122,7 @@ class Network:
                         break
                 else:  # 订单节点路长过大无法到达的情况, 需要进行精细调整
                     target_index = order_location.osm_index
-                    vehicle_to_target_distance = self._graph.move_to_target_index(vehicle_location, target_index, could_drive_distance)
+                    vehicle_to_target_distance = self._graph.move_to_target_index(vehicle_location, target_index, could_drive_distance, is_random_drive=False)
 
                     if covered_index == FIRST_INDEX:  # 如果是第一个订单就是不可达的那么要考虑之前行驶的距离
                         vehicle_to_target_distance += pre_drive_distance

@@ -23,7 +23,7 @@ EXPERIMENTAL_MODE = REAL_TRANSPORT
 # 一组参数实验的重复次数
 MAX_REPEATS = 10
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
-TIME_SLOT = 20
+TIME_SLOT = 25
 # 距离精度误差, 表示一个车辆到某一个点的距离小于这一个数, 那么就默认这个车已经到这个点上了 单位 m. 如果是实际的路网一般取10.0m, 如果是网格环境一般取0.0.
 DISTANCE_EPS = 10.0
 # 模拟天数的最小值/最大值，如果是网格环境默认为0, 如果是网格环境默认为1.
@@ -33,7 +33,7 @@ MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
 MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
 # 实验环境中的车辆数目
-VEHICLE_NUMBER = 500
+VEHICLE_NUMBER = 200
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 MILE_TO_KM * 12 / 3.6 m/s
 VEHICLE_SPEED = MILE_TO_KM * 12 / 3.6
 # 投标策略 "ADDITIONAL_COST" 以成本量的增加量作为投标 "ADDITIONAL_PROFIT" 以利润的增加量作为投标量
@@ -50,16 +50,18 @@ INSERTING = "INSERTING"
 RESCHEDULING = "RESCHEDULING"
 ROUTE_PLANNING_METHOD = INSERTING
 # 平台使用的订单分发方式
-NEAREST_DISPATCHING = "NEAREST_DISPATCHING"  # 通用的最近车辆分配算法
+NEAREST_DISPATCHING = "NEAREST-DISPATCHING"  # 通用的最近车辆分配算法
 VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = VCG_MECHANISM
+DISPATCHING_METHOD = SPARP_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
-GEO_NAME = "HaiKou"
+HaiKou = "HaiKou"
+Manhattan = "Manhattan"
+GEO_NAME = Manhattan
 GEO_DATA_FILE = {
     "base_folder": "./data/{0}/network_data".format(GEO_NAME),
     "graph_file": "{0}.graphml".format(GEO_NAME),

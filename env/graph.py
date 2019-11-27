@@ -43,8 +43,45 @@ class BaseGraph:
     def generate_random_locations(self, location_number: int, location_type) -> List[Union[OrderLocation, VehicleLocation]]:
         raise NotImplementedError
 
-    def move_to_target_index(self, vehicle_location: VehicleLocation, target_index: int, could_drive_distance: float) -> float:
-        raise NotImplementedError
+    def move_to_target_index(self, vehicle_location: VehicleLocation, target_index: int, could_drive_distance: float, is_random_drive=True) -> float:
+        """
+        模拟一个车辆真实得尝试向某一个可以到达的目标节点前进的过程
+        :param vehicle_location:
+        :param target_index:
+        :param could_drive_distance:
+        :param is_random_drive: 如果是random_drive就不会考虑一定要形式到could_drive_distance, is_random_drive 是真的
+        :return:
+        ------
+        注意：这个函数会修改vehicle_location的值, 确保车辆一定是在一个点上的，而不是在两个节点之间
+        """
+        if vehicle_location.is_between:
+            raise Exception("车辆不是固定在一个点上的无法继续进行后续的计算")
+        real_drive_distance = self.get_shortest_distance_by_osm_index(vehicle_location.osm_index, target_index)  # 实际行驶的距离
+        if is_enough_small(real_drive_distance - could_drive_distance, DISTANCE_EPS):  # 可以到target_index的情况
+            vehicle_location.set_location(target_index)
+        else:
+            real_drive_distance = FLOAT_ZERO
+            next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
+            while not is_enough_small(could_drive_distance, DISTANCE_EPS):  # 需要行驶的距离已经过小了的情况
+                vehicle_to_next_distance = self.get_shortest_distance_by_osm_index(vehicle_location.osm_index, next_index)  # 因为只是移动一个格子, 所以只是移动一个小格子
+                if is_enough_small(vehicle_to_next_distance - could_drive_distance, DISTANCE_EPS):
+                    real_drive_distance += vehicle_to_next_distance
+                    could_drive_distance -= vehicle_to_next_distance
+                    if is_enough_small(could_drive_distance, FLOAT_ZERO):
+                        vehicle_location.set_location(next_index)
+                        break
+                else:
+                    real_drive_distance += could_drive_distance
+                    vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
+                    break
+                vehicle_location.set_location(next_index)
+                next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
+            else:  # 正常退出情况需要更新此时车辆的位置
+                if not is_random_drive:  # 不是随机行走的才需要考虑完全将could_drive_distance走完，因为需要尽力完成订单
+                    real_drive_distance += could_drive_distance
+                    vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
+
+        return real_drive_distance
 
     def move_to_random_index(self, vehicle_location: VehicleLocation, could_drive_distance: float) -> float:
         raise NotImplementedError
@@ -142,43 +179,6 @@ class RealGraph(BaseGraph):
         """
         locations_index = np.random.choice(self._index_set, location_number)
         return [location_type(locations_index[i]) for i in range(location_number)]
-
-    def move_to_target_index(self, vehicle_location: VehicleLocation, target_index: int, could_drive_distance: float) -> float:
-        """
-        模拟一个车辆真实得尝试向某一个可以到达的目标节点前进的过程
-        :param vehicle_location:
-        :param target_index:
-        :param could_drive_distance:
-        ------
-        注意：这个函数会修改vehicle_location的值
-        """
-        if vehicle_location.is_between:
-            raise Exception("车辆不是固定在一个点上的无法继续进行后续的计算")
-        real_drive_distance = self._shortest_distance[vehicle_location.osm_index, target_index]  # 实际行驶的距离
-        if is_enough_small(real_drive_distance - could_drive_distance, DISTANCE_EPS):  # 可以到target_index的情况
-            vehicle_location.set_location(target_index)
-        else:
-            real_drive_distance = FLOAT_ZERO
-            next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
-            while not is_enough_small(could_drive_distance, DISTANCE_EPS):  # 还可以继续行驶的情况
-                vehicle_to_next_distance = self._shortest_distance[vehicle_location.osm_index, next_index]
-                if is_enough_small(vehicle_to_next_distance - could_drive_distance, DISTANCE_EPS):  # 可以走到next_index不过需要多走一段距离
-                    real_drive_distance += vehicle_to_next_distance
-                    could_drive_distance -= vehicle_to_next_distance
-                    if is_enough_small(could_drive_distance, FLOAT_ZERO):
-                        vehicle_location.set_location(next_index)
-                        break
-                else:
-                    real_drive_distance += could_drive_distance
-                    vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
-                    break
-                vehicle_location.set_location(next_index)
-                next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
-            else:  # 正常退出情况需要更新此时车辆的位置
-                real_drive_distance += could_drive_distance
-                vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
-
-        return real_drive_distance
 
     def move_to_random_index(self, vehicle_location: VehicleLocation, could_drive_distance: float) -> float:
         """
@@ -340,43 +340,6 @@ class GridGraph(BaseGraph):
         ys = np.random.choice(self._y_list, location_number)
         locations_index = [self._convert_xy_to_index(xs[i], ys[i]) for i in range(location_number)]
         return [location_type(locations_index[i]) for i in range(location_number)]
-
-    def move_to_target_index(self, vehicle_location: VehicleLocation, target_index: int, could_drive_distance: float) -> float:
-        """
-        模拟一个车辆真实得尝试向某一个可以到达的目标节点前进的过程
-        :param vehicle_location:
-        :param target_index:
-        :param could_drive_distance:
-        :return:
-        ------
-        注意：这个函数会修改vehicle_location的值, 确保车辆一定是在一个点上的，而不是在两个节点之间
-        """
-        if vehicle_location.is_between:
-            raise Exception("车辆不是固定在一个点上的无法继续进行后续的计算")
-        real_drive_distance = self.get_shortest_distance_by_osm_index(vehicle_location.osm_index, target_index)
-        if is_enough_small(real_drive_distance - could_drive_distance, DISTANCE_EPS):  # 可以到target_index的情况
-            vehicle_location.set_location(target_index)
-        else:
-            real_drive_distance = FLOAT_ZERO
-            next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
-            while not is_enough_small(could_drive_distance, DISTANCE_EPS):  # 需要行驶的距离已经过小了的情况
-                vehicle_to_next_distance = self._grid_size  # 因为只是移动一个格子, 所以只是移动一个小格子
-                if is_enough_small(vehicle_to_next_distance - could_drive_distance, DISTANCE_EPS):
-                    real_drive_distance += vehicle_to_next_distance
-                    could_drive_distance -= vehicle_to_next_distance
-                    if is_enough_small(could_drive_distance, FLOAT_ZERO):
-                        vehicle_location.set_location(next_index)
-                        break
-                else:
-                    real_drive_distance += could_drive_distance
-                    vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
-                    break
-                vehicle_location.set_location(next_index)
-                next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
-            else:  # 正常退出情况需要更新此时车辆的位置
-                real_drive_distance += could_drive_distance
-                vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
-        return real_drive_distance
 
     def move_to_random_index(self, vehicle_location: VehicleLocation, could_drive_distance: float) -> float:
         """
