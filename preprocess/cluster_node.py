@@ -7,6 +7,10 @@ from typing import Set
 from collections import defaultdict
 from utility import is_enough_small
 
+"""
+这个算法是来自滴滴的论文 Order Dispatch in Price-aware Ridesharing VLDB2018
+"""
+
 
 class Edge:
     __slots__ = ["p1", "p2", "distance", "oneway"]
