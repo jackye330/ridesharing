@@ -251,7 +251,8 @@ def generate_real_orders_data(network: Network):
         order_distance = network.get_shortest_distance(pick_location, drop_location)
         if is_enough_small(order_distance, DISTANCE_EPS) or order_distance == np.inf:  # 过于短的或者订单的距离是无穷大
             continue
-        yield int(request_time_series[i]), np.random.choice(WAIT_TIMES), pick_index_series[i], drop_index_series[i], order_fare_series[i], order_distance, detour_ratio_series[i], int(n_riders_series[i])
+        n_riders = 2 if int(n_riders_series[i]) > 2 else int(n_riders_series[i])  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
+        yield int(request_time_series[i]), np.random.choice(WAIT_TIMES), pick_index_series[i], drop_index_series[i], order_fare_series[i], order_distance, detour_ratio_series[i], n_riders
 
 
 def generate_grid_orders_data(network: Network):

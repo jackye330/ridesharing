@@ -105,7 +105,7 @@ class Vehicle:
         vehicles = []
         for vehicle_id in range(vehicle_number):
             each_vehicle_data = vehicle_raw_data.iloc[vehicle_id, :]
-            vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), int(each_vehicle_data["seats"]), each_vehicle_data["unit_cost"]))
+            vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), each_vehicle_data["seats"], each_vehicle_data["unit_cost"]))
         return vehicles
 
     @property
@@ -317,11 +317,13 @@ def generate_real_vehicles_data(locations: List[VehicleLocation], vehicle_number
     cars_info = car_fuel_consumption_info.sample(n=vehicle_number)
     seats_info = cars_info["seats"].values.astype(np.int)
     unit_cost_info = cars_info["fuel_consumption"].values.astype(np.float) * VEHICLE_FUEL_COST_RATIO
-    return [(locations[vehicle_id].osm_index, seats_info[vehicle_id], unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
+    seats = 4  # TODO 这一步是为了与order上限只有2对应的，以后可能需要修改
+    return [(locations[vehicle_id].osm_index, seats, unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
 
 
 def generate_grid_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
     from setting import UNIT_COSTS
     from setting import N_SEATS
     unit_costs = np.random.choice(UNIT_COSTS, size=(vehicle_number,))
-    return [(locations[vehicle_id].osm_index, N_SEATS, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]
+    seats = 4  # TODO 这一步是为了与order上限只有2对应的，以后可能需要修改
+    return [(locations[vehicle_id].osm_index, seats, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]
