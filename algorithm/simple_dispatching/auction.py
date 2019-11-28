@@ -22,7 +22,7 @@ class VCGMechanism(Mechanism):
     使用二部图匹配决定分配，利用vcg价格进行支付，主要基vcg机制理论, 最大化社会福利 pair_social_welfare = sum{order.order_fare} - sum{bid.additional_cost}
     """
 
-    __slots__ = ["graph", "t3"]
+    __slots__ = ["graph"]
 
     def __init__(self):
         super(VCGMechanism, self).__init__()
@@ -54,9 +54,7 @@ class VCGMechanism(Mechanism):
         for winner_vehicle, corresponding_order in match_pairs:
             # 计算VCG价格
             bipartite_graph.temporarily_remove_vehicle(winner_vehicle)  # 临时性的删除一个车辆
-            tx = time.clock()
             social_welfare_without_winner, _ = bipartite_graph.maximal_weight_matching(return_match=False)  # 计算没有这辆车时候的社会福利
-            print(time.clock() - tx)
             bipartite_graph.recovery_remove_vehicle()  # 恢复被删除的车辆
             winner_bid = bipartite_graph.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
             additional_cost = winner_bid.additional_cost
@@ -76,24 +74,16 @@ class VCGMechanism(Mechanism):
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
         self.reset()  # 清空结果
-        self.t3 = 0
 
         # 构建图
         t1 = time.clock()
         main_graph = self._build_graph(vehicles, orders, current_time, network, MaximumWeightMatchingGraph)
         self._bidding_time = (time.clock() - t1)  # 统计投标时间
 
-        print("订单数目是 {0}".format(main_graph.order_number))
-        print("车辆数目是 {0}".format(main_graph.vehicle_number))
-
         # 订单分配与司机定价
         for sub_graph in main_graph.get_sub_graphs():
-            print("in sub graph")
-            tx = time.clock()
             sub_social_welfare, sub_match_pairs = sub_graph.maximal_weight_matching(return_match=True)  # 胜者决定
-            print(time.clock() - tx)
             self.driver_pricing(sub_graph, sub_match_pairs, sub_social_welfare)  # 司机定价并统计结果
-        print(self.t3)
         self._running_time = (time.clock() - t1 - self._bidding_time)
 
 

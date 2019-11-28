@@ -289,6 +289,14 @@ class Vehicle:
     def increase_random_distance(self, additional_distance: float) -> NoReturn:
         self._vehicle_type.random_driven_distance += additional_distance
 
+    def enter_platform(self) -> NoReturn:
+        """
+        当车辆是没有激活的状态的时候，按照一定概率进入平台
+        :return:
+        """
+        # TODO 日后补这个函数，车辆可能还会休息一段时间之后进入平台
+        pass
+
     def leave_platform(self) -> NoReturn:
         """
         按照一定概率离开平台

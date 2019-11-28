@@ -2,8 +2,8 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/11/26
-from setting import INPUT_VEHICLES_DATA_FILES, INPUT_ORDERS_DATA_FILES, SAVE_RESULT_FILES, MAX_REPEATS
-from simulator import Simulator
+from setting import INPUT_VEHICLES_DATA_FILES, INPUT_ORDERS_DATA_FILES, SAVE_RESULT_FILES
+from runner.simulator import Simulator
 
 if __name__ == '__main__':
     simulator = Simulator()  # 这一步已经创建了所有的网络数目，平台情况

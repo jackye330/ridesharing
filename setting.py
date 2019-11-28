@@ -55,7 +55,7 @@ VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = GM_MECHANISM
+DISPATCHING_METHOD = VCG_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
@@ -63,7 +63,7 @@ HaiKou = "HaiKou"
 Manhattan = "Manhattan"
 GEO_NAME = Manhattan
 GEO_DATA_FILE = {
-    "base_folder": "./data/{0}/network_data".format(GEO_NAME),
+    "base_folder": "../data/{0}/network_data".format(GEO_NAME),
     "graph_file": "{0}.graphml".format(GEO_NAME),
     "osm_id2index_file": "osm_id2index.pkl",
     "index2osm_id_file": "index2osm_id.pkl",
@@ -76,9 +76,9 @@ GEO_DATA_FILE = {
     "adjacent_location_goal_index_file": "{0}/adjacent_location_goal_index.pkl".format(TIME_SLOT),
 }
 # 订单数据存放地址
-ORDER_DATA_FILES = ["./data/{0}/order_data/order_data_{1:03}.csv".format(GEO_NAME, day) for day in range(MIN_REQUEST_DAY, MAX_REQUEST_DAY)]
+ORDER_DATA_FILES = ["../data/{0}/order_data/order_data_{1:03}.csv".format(GEO_NAME, day) for day in range(MIN_REQUEST_DAY, MAX_REQUEST_DAY)]
 # 车辆油耗与座位数据存放地址
-FUEL_CONSUMPTION_DATA_FILE = "./data/vehicle_data/fuel_consumption_and_seats.csv"
+FUEL_CONSUMPTION_DATA_FILE = "../data/vehicle_data/fuel_consumption_and_seats.csv"
 # 直接与此常数相乘可以得到单位距离的成本 $/m/(单位油耗)
 VEHICLE_FUEL_COST_RATIO = 2.5 / 6.8 / MILE_TO_M
 # 乘客最大绕路比可选范围
@@ -105,6 +105,6 @@ N_SEATS = 4
 MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
 
 # 与环境创建相关的数据 #################################################################
-INPUT_VEHICLES_DATA_FILES = ["./data/input/vehicles_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
-INPUT_ORDERS_DATA_FILES = ["./data/input/orders_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
-SAVE_RESULT_FILES = ["./result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
+INPUT_ORDERS_DATA_FILES = ["../data/input/orders_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
+SAVE_RESULT_FILES = ["../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
