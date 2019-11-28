@@ -264,7 +264,6 @@ class Vehicle:
                     self.increase_available_seats(belong_order.n_riders)
                     self._finish_orders_number += 1
                     _finish_orders.append(belong_order)
-
         if un_covered_location_index != FIRST_INDEX:  # 只有有变化才更新路径
             self.set_route(self.route[un_covered_location_index:])
         return _finish_orders

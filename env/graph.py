@@ -77,7 +77,7 @@ class BaseGraph:
                 vehicle_location.set_location(next_index)
                 next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
             else:  # 正常退出情况需要更新此时车辆的位置
-                if not is_random_drive:  # 不是随机行走的才需要考虑完全将could_drive_distance走完，因为需要尽力完成订单
+                if not is_random_drive:  # 不是随机行驶
                     real_drive_distance += could_drive_distance
                     vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
 

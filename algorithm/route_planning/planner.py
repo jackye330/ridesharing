@@ -163,19 +163,20 @@ class ReschedulingPlanner(RoutePlanner):
             if len(_rem_loc_list) == INT_ZERO:
                 yield _cur_loc_list.copy(), RouteInfo(True, cur_dists - old_dists, detour_ratios_dict.copy())
             elif is_enough_small((cur_dists - old_dists) * unit_cost, corresponding_optimal_cost):
+                _cur_loc_copy = _cur_loc_list.copy()
                 for i, o_loc in enumerate(_rem_loc_list):
-                    v2o_dist = (network.get_shortest_distance(v_loc, o_loc) if len(_cur_loc_list) == INT_ZERO else network.get_shortest_distance(_cur_loc_list[-1], o_loc))
+                    v2o_dist = (network.get_shortest_distance(v_loc, o_loc) if len(_cur_loc_copy) == INT_ZERO else network.get_shortest_distance(_cur_loc_copy[-1], o_loc))
                     _cur_dists = cur_dists + v2o_dist
                     _order: Order = o_loc.belong_order
-                    _cur_loc_list.append(o_loc)
+                    _cur_loc_copy.append(o_loc)
                     if isinstance(o_loc, PickLocation):
                         upper_time = (_order.request_time + _order.wait_time - current_time)
-                        if cur_seats - _order.n_riders >= INT_ZERO and network.is_smaller_bound_distance(cur_dists - old_dists, avg_speed * upper_time):
+                        if cur_seats - _order.n_riders >= INT_ZERO and network.is_smaller_bound_distance(_cur_dists - old_dists, avg_speed * upper_time):
                             # 人数满足要求且不超过最大等待时间
                             _rem_list_copy = _rem_loc_list[:i] + _rem_loc_list[i + 1:]
                             _rem_list_copy.append(_order.drop_location)
                             pick_up_dists_dict[_order] = _cur_dists
-                            for n_r, n_i in _recursion(_cur_loc_list, _rem_list_copy, cur_seats - _order.n_riders, _cur_dists):
+                            for n_r, n_i in _recursion(_cur_loc_copy, _rem_list_copy, cur_seats - _order.n_riders, _cur_dists):
                                 yield n_r, n_i
                             pick_up_dists_dict.pop(_order)
 
@@ -185,10 +186,10 @@ class ReschedulingPlanner(RoutePlanner):
                             # 绕路满足要求
                             _rem_list_copy = _rem_loc_list[:i] + _rem_loc_list[i + 1:]
                             detour_ratios_dict[_order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / _order.order_distance
-                            for n_r, n_i in _recursion(_cur_loc_list, _rem_list_copy, cur_seats + _order.n_riders, _cur_dists):
+                            for n_r, n_i in _recursion(_cur_loc_copy, _rem_list_copy, cur_seats + _order.n_riders, _cur_dists):
                                 yield n_r, n_i
 
-                    _cur_loc_list.pop()
+                    _cur_loc_copy.pop()
 
         self.reset()  # 优化器初始化！！！！
         if pre_check_need_to_planning(vehicle_type, order, current_time, network):  # 人数都不满足要求不用往后执行

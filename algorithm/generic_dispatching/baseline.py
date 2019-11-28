@@ -103,7 +103,6 @@ class SPARPMechanism(Mechanism):
             reverse_price = order.order_fare - max_cost  # 平台的保留价格
             winner_vehicle, winner_bid = order_bids[0]  # 胜利司机与其相对应的投标
             pair_social_welfare = winner_bid.bid_value  # 平台的社会福利
-
             if is_enough_small(FLOAT_ZERO, pair_social_welfare) and is_enough_small(reverse_price, pair_social_welfare):
                 if len(order_bids) > 1:
                     _, max_loser_bid = order_bids[1]
