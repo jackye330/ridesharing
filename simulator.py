@@ -166,15 +166,16 @@ class Simulator:
             self.platform.round_based_process(self.vehicles, new_orders, self.current_time, self.network)  # 订单分发和司机定价
             self.trace_vehicles_info()  # 车辆更新信息
             self.summary_each_round_result(new_orders)  # 统计匹配结果
-            print("at {0} social welfare {1} driver payoffs {2} platform profit {3} empty vehicle ratio {4} service ratio {5}".\
-                  format(current_time,
-                         self.social_welfare_trend[-1],
-                         self.total_driver_payoffs_trend[-1],
-                         self.platform_profit_trend[-1],
-                         self.empty_vehicle_ratio_trend[-1],
-                         self.accumulate_service_ratio_trend[-1]
-                         )
-                  )
+            print(
+                "at {0} social welfare {1} driver payoffs {2} platform profit {3} empty vehicle ratio {4} service ratio {5}".format(
+                    current_time,
+                    self.social_welfare_trend[-1],
+                    self.total_driver_payoffs_trend[-1],
+                    self.platform_profit_trend[-1],
+                    self.empty_vehicle_ratio_trend[-1],
+                    self.accumulate_service_ratio_trend[-1]
+                )
+            )
 
         # 等待所有车辆完成订单之后结束
         self.current_time += self.time_slot

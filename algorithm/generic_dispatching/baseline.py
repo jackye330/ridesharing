@@ -72,6 +72,7 @@ class SPARPMechanism(Mechanism):
     这里面使用 使用平台收益作为投标，使用二级拍卖的方式决定支付，同时设置了保留价格保证平台收益
     平台赚取信息费，司机投标表示从这个平台可以获取的收入，而司机还需要支付平台一定的钱取获得这一部分收入
     """
+    __slots__ = []
 
     def __init__(self):
         super(SPARPMechanism, self).__init__()
