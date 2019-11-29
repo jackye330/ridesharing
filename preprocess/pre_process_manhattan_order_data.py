@@ -102,48 +102,54 @@ if not os.path.exists(manhattan_temp_dir):
 # print(cnt)
 # temp_file.close()
 
-# # 提取只在曼哈顿的数据合并黄绿出租车的订单数据
-# G = ox.load_graphml(Manhattan + ".graph" + "ml", "../data/{0}/network_data".format(Manhattan))
-# ok_nodes = set(G.nodes)
-# temp_green_result_file = os.path.join(new_york_temp_dir, "green_temp2.csv")
-# temp_yellow_result_file = os.path.join(new_york_temp_dir, "yellow_temp2.csv")
-# with open(os.path.join("../data/{0}/network_data/".format(Manhattan), "osm_id2index.pkl"), "rb") as file:
-#     osm_id2index = pickle.load(file)
-# order_files = []
-# for i in range(30):
-#     file = open(os.path.join(manhattan_temp_dir, "order_data_2016_06_{0:03}.csv".format(i)), "w")
-#     file.write("pick_time,drop_time,pick_index,drop_index,n_riders,order_distance,order_fare,order_tip,total_fare\n")
-#     order_files.append(file)
-#
-# for csv_iterator in pd.read_table(temp_green_result_file, chunksize=chunk_size, iterator=True):
-#     for line in csv_iterator.values:
-#         s = line[0].split(",")
-#         index = int(float(s[0])) - 1
-#         data = s[1:]
-#         if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes:
-#             continue
-#         data[0] = str(int(float(data[0])))
-#         data[1] = str(int(float(data[1])))
-#         data[2] = str(osm_id2index[int(data[2])])
-#         data[3] = str(osm_id2index[int(data[3])])
-#         data[4] = str(int(float(data[4])))
-#         order_files[index].write(",".join(data) + '\n')
-#
-# for csv_iterator in pd.read_table(temp_yellow_result_file, chunksize=chunk_size, iterator=True):
-#     for line in csv_iterator.values:
-#         s = line[0].split(",")
-#         index = int(float(s[0])) - 1
-#         data = s[1:]
-#         if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes:
-#             continue
-#         data[0] = str(int(float(data[0])))
-#         data[1] = str(int(float(data[1])))
-#         data[2] = str(osm_id2index[int(data[2])])
-#         data[3] = str(osm_id2index[int(data[3])])
-#         data[4] = str(int(float(data[4])))
-#         order_files[index].write(",".join(data) + '\n')
-# for i in range(30):
-#     order_files[i].close()
+# 提取只在曼哈顿的数据合并黄绿出租车的订单数据
+G = ox.load_graphml(Manhattan + ".graph" + "ml", "../data/{0}/network_data".format(Manhattan))
+ok_nodes = set(G.nodes)
+temp_green_result_file = os.path.join(new_york_temp_dir, "green_temp2.csv")
+temp_yellow_result_file = os.path.join(new_york_temp_dir, "yellow_temp2.csv")
+with open(os.path.join("../data/{0}/network_data/".format(Manhattan), "osm_id2index.pkl"), "rb") as file:
+    osm_id2index = pickle.load(file)
+order_files = []
+for i in range(30):
+    file = open(os.path.join(manhattan_temp_dir, "order_data_2016_06_{0:03}.csv".format(i)), "w")
+    file.write("pick_time,drop_time,pick_index,drop_index,n_riders,order_distance,order_fare,order_tip,total_fare\n")
+    order_files.append(file)
+
+for csv_iterator in pd.read_table(temp_green_result_file, chunksize=chunk_size, iterator=True):
+    for line in csv_iterator.values:
+        s = line[0].split(",")
+        index = int(float(s[0])) - 1
+        data = s[1:]
+        if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes or int(data[2]) == int(data[3]):
+            continue
+
+        if int(float(data[1])) <= int(float(data[0])) + 60:
+            continue
+        data[0] = str(int(float(data[0])))
+        data[1] = str(int(float(data[1])))
+        data[2] = str(osm_id2index[int(data[2])])
+        data[3] = str(osm_id2index[int(data[3])])
+        data[4] = str(int(float(data[4])))
+        order_files[index].write(",".join(data) + '\n')
+
+for csv_iterator in pd.read_table(temp_yellow_result_file, chunksize=chunk_size, iterator=True):
+    for line in csv_iterator.values:
+        s = line[0].split(",")
+        index = int(float(s[0])) - 1
+        data = s[1:]
+        if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes or int(data[2]) == int(data[3]):
+            continue
+
+        if int(float(data[1])) <= int(float(data[0])) + 60:
+            continue
+        data[0] = str(int(float(data[0])))
+        data[1] = str(int(float(data[1])))
+        data[2] = str(osm_id2index[int(data[2])])
+        data[3] = str(osm_id2index[int(data[3])])
+        data[4] = str(int(float(data[4])))
+        order_files[index].write(",".join(data) + '\n')
+for i in range(30):
+    order_files[i].close()
 
 # 按时间排序
 for i in range(30):
