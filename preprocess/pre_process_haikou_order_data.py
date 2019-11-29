@@ -7,11 +7,11 @@ import time
 import pickle
 import osmnx as ox
 import pandas as pd
-from setting import GEO_NAME
+from setting import HaiKou
 from setting import GEO_DATA_FILE
 
-result_dir = "../data/{0}/order_data".format(GEO_NAME)
-temp_dir = "./raw_data/temp/{0}/".format(GEO_NAME)
+result_dir = "../data/{0}/order_data".format(HaiKou)
+temp_dir = "./raw_data/temp/{0}/".format(HaiKou)
 eps = 0.001
 
 
@@ -26,7 +26,7 @@ def list2str(lis):
 
 # 筛选需要的字段
 for file_index in range(1, 9):
-	raw_order_filename = os.path.join("./raw_data/{0}_raw_data".format(GEO_NAME), "dwv_order_make_haikou_{0}.txt".format(file_index))
+	raw_order_filename = os.path.join("./raw_data/{0}_raw_data".format(HaiKou), "dwv_order_make_haikou_{0}.txt".format(file_index))
 	temp1_file = open(os.path.join(temp_dir, "order_make_haikou_{0}.csv".format(file_index)), "w")
 	with open(raw_order_filename, "r") as file:
 		idx = 0
@@ -35,7 +35,7 @@ for file_index in range(1, 9):
 			if idx == 0:
 				info = list(map(lambda x: x.split('.')[1], info))
 				idx += 1
-			new_info = [info[12]] + info[19:21] + info[17:19] + [info[10]] + [info[13]]
+			new_info = [info[12]] + info[19:21] + info[17:19] + [info[14]] + [info[10]] + [info[13]]
 			temp1_file.write(",".join(new_info) + '\n')
 	temp1_file.close()
 
@@ -53,26 +53,24 @@ for file_index in range(1, 9):
 			info_time = info[0].split(' ')[1]
 			if info_date not in date2file:
 				date2file[info_date] = open(os.path.join(temp_dir, "temp1_order_make_haikou_{0}.csv".format(info_date)), "w")
-				date2file[info_date].write("pick_time,pick_lon,pick_lat,drop_lon,drop_lat,n_riders,order_distance,order_fare\n")
-			info = [time2int(info_time)] + info[1:5] + ["1"] + info[5:7]
+				date2file[info_date].write("pick_time,pick_lon,pick_lat,drop_lon,drop_lat,n_riders,order_time,order_distance,order_fare\n")
+			info = [time2int(info_time)] + info[1:5] + ["1"] + info[5:]
 			date2file[info_date].write(",".join(info))
 
 for date, file in date2file.items():
 	file.close()
 
 # 按时间排序且点对齐
-G = ox.load_graphml(GEO_NAME + ".graph" + "ml", "../data/{0}/network_data".format(GEO_NAME))  # 注意：".graph"+"ml" 是不为了飘绿色
-nodes = G.nodes(data=True)
-nodes_dict = {node[0]: (float(node[1]['x']), float(node[1]['y'])) for node in nodes}
+G = ox.load_graphml(HaiKou + ".graph" + "ml", "../data/{0}/network_data".format(HaiKou))  # 注意：".graph"+"ml" 是不为了飘绿色
 osm_id2index_file = GEO_DATA_FILE["osm_id2index_file"]
-with open("../data/{0}/network_data/".format(GEO_NAME) + osm_id2index_file, "rb") as file:
+with open("../data/{0}/network_data/".format(HaiKou) + osm_id2index_file, "rb") as file:
 	osm_id2index = pickle.load(file)
 
 dates = pd.date_range("2017-05-01", "2017-10-31")
 dates = list(map(lambda _date: str(_date).split()[0], dates))
 for date in dates:
 	temp2_file = open(os.path.join(temp_dir, "temp2_order_make_haikou_{0}.csv".format(date)), "w")
-	temp2_file.write("pick_time,pick_index,drop_index,n_riders,order_distance,order_fare\n")
+	temp2_file.write("pick_time,pick_index,drop_index,n_riders,order_time,order_distance,order_fare\n")
 	order_data = pd.read_csv(os.path.join(temp_dir, "temp1_order_make_haikou_{0}.csv".format(date)))
 	order_data.sort_values(by=["pick_time"], inplace=True)
 	order_data = order_data.values
@@ -82,7 +80,6 @@ for date in dates:
 	drop_lat = order_data[:, 4]
 	correct_pick_osm_ids = ox.get_nearest_nodes(G, pick_lon, pick_lat, method="balltree")
 	correct_drop_osm_ids = ox.get_nearest_nodes(G, drop_lon, drop_lat, method="balltree")
-	t1 = time.clock()
 	correct_pick_indexes = list(map(lambda osm_id: osm_id2index[osm_id], correct_pick_osm_ids))
 	correct_drop_indexes = list(map(lambda osm_id: osm_id2index[osm_id], correct_drop_osm_ids))
 	for idx in range(order_data.shape[0]):
@@ -93,9 +90,7 @@ for date in dates:
 
 dates = pd.date_range("2017-05-01", "2017-10-31")
 dates = list(map(lambda _date: str(_date).split()[0], dates))
-for date in dates:
-	order_data = pd.read_csv(os.path.join(temp_dir, "temp2_order_make_haikou_{0}.csv".format(date)))
-	order_data.to_csv(os.path.join(result_dir, "order_data_{0}.csv".format(date)), sep=",", index=False)
-
 for i, date in enumerate(dates):
-	os.rename(os.path.join(result_dir, "order_data_{0}.csv".format(date)), os.path.join(result_dir, "order_data_{0:03}.csv".format(i)))
+	order_data = pd.read_csv(os.path.join(temp_dir, "temp2_order_make_haikou_{0}.csv".format(date)))
+	order_data["order_time"] = order_data["order_time"] * 60
+	order_data.to_csv(os.path.join(result_dir, "order_data_{0:03}.csv".format(i)), sep=",", index=False)

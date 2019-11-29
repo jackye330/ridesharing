@@ -11,7 +11,7 @@ from setting import ORDER_DATA_FILES
 average_vehicle_speed = FLOAT_ZERO
 for file_name in ORDER_DATA_FILES:
     csv_data = pd.read_csv(file_name)
-    vehicle_speed = csv_data["order_distance"] / (csv_data["drop_time"] - csv_data["pick_time"])
+    vehicle_speed = csv_data["order_distance"] / csv_data["order_time"]
     average_vehicle_speed += vehicle_speed.mean()
 
-print(average_vehicle_speed / len(ORDER_DATA_FILES) * 1000)
+print(average_vehicle_speed / len(ORDER_DATA_FILES))

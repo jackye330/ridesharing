@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/11/26
-from setting import INPUT_VEHICLES_DATA_FILES, INPUT_ORDERS_DATA_FILES, SAVE_RESULT_FILES
+from setting import INPUT_VEHICLES_DATA_FILES, INPUT_ORDERS_DATA_FILES, SAVE_RESULT_FILES, MAX_REPEATS
 from runner.simulator import Simulator
 
 if __name__ == '__main__':

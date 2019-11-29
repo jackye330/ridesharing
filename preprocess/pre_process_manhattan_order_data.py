@@ -119,7 +119,7 @@ with open(os.path.join("../data/{0}/network_data/".format(Manhattan), "osm_id2in
 order_files = []
 for i in range(30):
     file = open(os.path.join(manhattan_temp_dir, "order_data_2016_06_{0:03}.csv".format(i)), "w")
-    file.write("pick_time,drop_time,pick_index,drop_index,n_riders,order_distance,order_fare,order_tip,total_fare\n")
+    file.write("pick_time,pick_index,drop_index,n_riders,order_time,order_distance,order_fare,order_tip,total_fare\n")
     order_files.append(file)
 
 for csv_iterator in pd.read_table(temp_green_result_file, chunksize=chunk_size, iterator=True):
@@ -129,12 +129,13 @@ for csv_iterator in pd.read_table(temp_green_result_file, chunksize=chunk_size, 
         data = s[1:]
         if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes or int(data[2]) == int(data[3]):
             continue
-        data[0] = str(int(float(data[0])))
-        data[1] = str(int(float(data[1])))
-        data[2] = str(osm_id2index[int(data[2])])
-        data[3] = str(osm_id2index[int(data[3])])
-        data[4] = str(int(float(data[4])))
-        order_files[index].write(",".join(data) + '\n')
+        line_data = "{0},{1},{2},{3},{4},{5},{6},{7},{8}".format(
+            int(float(data[0])),
+            osm_id2index[int(data[2])], osm_id2index[int(data[3])],
+            int(float(data[4])), int(float(data[1])) - int(float(data[0])), data[5], data[6], data[7], data[8],
+
+        )
+        order_files[index].write(line_data + '\n')
 
 for csv_iterator in pd.read_table(temp_yellow_result_file, chunksize=chunk_size, iterator=True):
     for line in csv_iterator.values:
@@ -143,17 +144,19 @@ for csv_iterator in pd.read_table(temp_yellow_result_file, chunksize=chunk_size,
         data = s[1:]
         if int(data[2]) not in ok_nodes or int(data[3]) not in ok_nodes or int(data[2]) == int(data[3]):
             continue
-        data[0] = str(int(float(data[0])))
-        data[1] = str(int(float(data[1])))
-        data[2] = str(osm_id2index[int(data[2])])
-        data[3] = str(osm_id2index[int(data[3])])
-        data[4] = str(int(float(data[4])))
-        order_files[index].write(",".join(data) + '\n')
+        line_data = "{0},{1},{2},{3},{4},{5},{6},{7},{8}".format(
+            int(float(data[0])),
+            osm_id2index[int(data[2])], osm_id2index[int(data[3])],
+            int(float(data[4])), int(float(data[1])) - int(float(data[0])), data[5], data[6], data[7], data[8],
+
+        )
+        order_files[index].write(line_data + '\n')
 for i in range(30):
     order_files[i].close()
 
 # 按时间排序
 for i in range(30):
     df_ = pd.read_csv(os.path.join(manhattan_temp_dir, "order_data_2016_06_{0:03}.csv".format(i)))
-    df_.sort_values(by=["pick_time", "drop_time"], inplace=True)
+    df_["order_distance"] = df_["order_distance"] * 1000
+    df_.sort_values(by=["pick_time", "order_time"], inplace=True)
     df_.to_csv(os.path.join(result_dir, "order_data_{0:03}.csv".format(i)), sep=',', index=False)
