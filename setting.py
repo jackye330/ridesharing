@@ -59,6 +59,7 @@ DISPATCHING_METHOD = VCG_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
+NewYork = "NewYork"
 HaiKou = "HaiKou"
 Manhattan = "Manhattan"
 GEO_NAME = Manhattan
