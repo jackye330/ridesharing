@@ -56,25 +56,6 @@ class Optimizer:
         return self._optimal_route_info
 
 
-class MinimizeWaitTimeOptimizer(Optimizer):
-    __slots__ = []
-
-    def __init__(self):
-        super(MinimizeWaitTimeOptimizer, self).__init__(POS_INF)  # 这里是为了最小化乘客等待的时间
-
-    def reset(self):
-        """
-        初始化优化器保存的最优值
-        由于需要最小化乘客等待时间，所以将最优值初始化为无穷大，将路线规划初始化空的序列
-        """
-        super(MinimizeWaitTimeOptimizer, self).reset()
-        self._optimal_value = POS_INF
-
-    def optimize(self, route: List[OrderLocation], route_info: RouteInfo, unit_cost: float, **other_info) -> NoReturn:
-        # TODO 日后再来补这个函数
-        pass
-
-
 class MinimizeCostOptimizer(Optimizer):
     __slots__ = []
 
@@ -122,3 +103,6 @@ class MaximizeProfitOptimizer(Optimizer):
                 self._corresponding_optimal_cost = route_info.route_cost
                 self._optimal_route = route
                 self._optimal_route_info = route_info
+
+
+

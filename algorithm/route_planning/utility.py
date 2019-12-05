@@ -111,25 +111,31 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
     pick_up_dists_dict: Dict[Order, float] = dict()  # 记录每一个订单在被接到时行驶的距离
     detour_ratios_dict: Dict[Order, float] = dict()  # 记录每一个订单的绕路比
     for i in range(len(route)):
-        cur_dists += (network.get_shortest_distance(v_loc, route[i]) if i == FIRST_INDEX else network.get_shortest_distance(route[i - 1], route[i]))
-        order: Order = route[i].belong_order
+        if i == FIRST_INDEX:
+            vehicle_to_order_distance = network.get_shortest_distance(vehicle_type.location, route[i])
+        else:
+            vehicle_to_order_distance = network.get_shortest_distance(route[i-1], route[i])
+        cur_dists += vehicle_to_order_distance
+        belong_order: Order = route[i].belong_order
         if isinstance(route[i], PickLocation):
-            cur_seats -= order.n_riders
+            cur_seats -= belong_order.n_riders
             if cur_seats < 0:  # 座位数目是不可行的
                 break
             # 计算接送时间，判断是否可以接到订单
-            upper_time = order.request_time + order.wait_time - current_time
+            upper_time = belong_order.request_time + belong_order.wait_time - current_time
             if network.is_smaller_bound_distance(cur_dists - old_dists, avg_speed * upper_time):  # 计算到达时间是否超出于其的要求
-                pick_up_dists_dict[order] = cur_dists  # 更新接乘客已经行驶的里程
+                pick_up_dists_dict[belong_order] = cur_dists  # 更新接乘客已经行驶的里程
             else:  # 无法满足最大等待时间
+                # raise Exception("接送距离存在问题")
                 break
         else:
-            cur_seats += order.n_riders
+            cur_seats += belong_order.n_riders
             # 计算绕路比，判断绕路比是否可以满足要求
-            real_detour_dist = cur_dists - (pick_up_dists_dict[order] if order in pick_up_dists_dict else order.pick_up_distance) - order.order_distance  # 计算绕路比距离
-            if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, order.detour_distance):
-                detour_ratios_dict[order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / order.order_distance
+            real_detour_dist = cur_dists - (pick_up_dists_dict[belong_order] if belong_order in pick_up_dists_dict else belong_order.pick_up_distance) - belong_order.order_distance  # 计算绕路比距离
+            if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_order.detour_distance):
+                detour_ratios_dict[belong_order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / belong_order.order_distance
             else:  # 无法满足绕路比, 或者绕路比是有问题的路径规划
+                # raise Exception("绕路距离存在问题")
                 break
     else:
         return RouteInfo(True, cur_dists - old_dists, detour_ratios_dict)

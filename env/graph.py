@@ -208,31 +208,31 @@ class RealGraph(BaseGraph):
                 real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
         else:
             # 直接选择点随机行走
-            # if len(self.access_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
-            #     target_index = np.random.choice(range(len(self.shortest_distance)))
-            #     vehicle_location.set_location(target_index)  # 凭空迁移
-            # else:
-            #     target_index = np.random.choice(self.access_index[vehicle_location.osm_index])
-            #     this_time_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
-            if len(self._adjacent_location_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 一分钟到不了任何节点，随机选择一个可以到达节点作为目标节点前进
-                if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
-                    target_index = np.random.choice(range(len(self._shortest_distance)))
-                    vehicle_location.set_location(target_index)  # 凭空迁移
-                else:
-                    target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
-                    real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
+            if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
+                target_index = np.random.choice(range(len(self._shortest_distance)))
+                vehicle_location.set_location(target_index)  # 凭空迁移
             else:
-                idx = np.random.randint(0, len(self._adjacent_location_osm_index[vehicle_location.osm_index]))
-                osm_index = self._adjacent_location_osm_index[vehicle_location.osm_index][idx]
-                driven_distance = self._adjacent_location_driven_distance[vehicle_location.osm_index][idx]
-                goal_index = self._adjacent_location_goal_index[vehicle_location.osm_index][idx]
-                vehicle_to_goal_distance = self._shortest_distance[vehicle_location.osm_index, osm_index]
-                real_drive_distance += vehicle_to_goal_distance
-                if osm_index != goal_index:
-                    vehicle_location.set_location(osm_index, driven_distance, goal_index)
-                    real_drive_distance += driven_distance
-                else:
-                    vehicle_location.set_location(osm_index)
+                target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
+                real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
+            # if len(self._adjacent_location_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 一分钟到不了任何节点，随机选择一个可以到达节点作为目标节点前进
+            #     if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
+            #         target_index = np.random.choice(range(len(self._shortest_distance)))
+            #         vehicle_location.set_location(target_index)  # 凭空迁移
+            #     else:
+            #         target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
+            #         real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
+            # else:
+            #     idx = np.random.randint(0, len(self._adjacent_location_osm_index[vehicle_location.osm_index]))
+            #     osm_index = self._adjacent_location_osm_index[vehicle_location.osm_index][idx]
+            #     driven_distance = self._adjacent_location_driven_distance[vehicle_location.osm_index][idx]
+            #     goal_index = self._adjacent_location_goal_index[vehicle_location.osm_index][idx]
+            #     vehicle_to_goal_distance = self._shortest_distance[vehicle_location.osm_index, osm_index]
+            #     real_drive_distance += vehicle_to_goal_distance
+            #     if osm_index != goal_index:
+            #         vehicle_location.set_location(osm_index, driven_distance, goal_index)
+            #         real_drive_distance += driven_distance
+            #     else:
+            #         vehicle_location.set_location(osm_index)
 
         return real_drive_distance
 

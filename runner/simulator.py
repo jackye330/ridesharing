@@ -3,8 +3,8 @@
 # author : zlq16
 # date   : 2019/2/22
 from typing import List, NoReturn, Set
-
 from agent.platform import Platform
+from agent.utility import VehicleType
 from agent.proxy_bidder import AdditionalProfitBidder, AdditionalCostBidder
 from agent.vehicle import Vehicle, generate_real_vehicles_data, generate_grid_vehicles_data
 from algorithm.generic_dispatching.auction import second_price_sequence_auction
@@ -23,7 +23,8 @@ from setting import TIME_SLOT, VEHICLE_NUMBER, MIN_REQUEST_TIME, MIN_REQUEST_DAY
 
 class Simulator:
     __slots__ = [
-        "network", "vehicles", "orders", "platform", "time_slot", "current_time",
+        "network", "vehicles", "orders", "platform", "vehicle_update_location_time_slot", "platform_matching_time_slot",
+        "current_time",
         "social_welfare_trend", "social_cost_trend", "total_driver_rewards_trend", "total_driver_payoffs_trend", "platform_profit_trend",
         "accumulate_service_ratio_trend", "total_orders_number_trend", "serviced_orders_number_trend",
         "empty_vehicle_number_trend", "total_vehicle_number_trend", "empty_vehicle_ratio_trend",
@@ -66,7 +67,7 @@ class Simulator:
         self.vehicles: List[Vehicle] = list()
         self.orders = None  # 实则是一个生成器
         self.network: Network = network
-        self.time_slot: int = TIME_SLOT
+        self.vehicle_update_location_time_slot: int = TIME_SLOT
         self.current_time = MIN_REQUEST_DAY * SECOND_OF_DAY + MIN_REQUEST_TIME
         self.social_welfare_trend = list()
         self.social_cost_trend = list()
@@ -129,8 +130,8 @@ class Simulator:
             route_planner = ReschedulingPlanner(optimizer)
         else:
             raise Exception("目前还没有实现其他的路线规划方式")
-        self.vehicles = Vehicle.load_vehicles_data(VEHICLE_SPEED, self.time_slot, proxy_bidder, route_planner, vehicles_data_file)
-        self.orders = Order.load_orders_data(MIN_REQUEST_TIME, self.time_slot, orders_data_file)
+        self.vehicles = Vehicle.load_vehicles_data(VEHICLE_SPEED, self.vehicle_update_location_time_slot, proxy_bidder, route_planner, vehicles_data_file)
+        self.orders = Order.load_orders_data(MIN_REQUEST_TIME, self.vehicle_update_location_time_slot, orders_data_file)
 
     def save_simulate_result(self, file_name):
         import pickle
@@ -180,7 +181,7 @@ class Simulator:
             )
 
         # 等待所有车辆完成订单之后结束
-        self.current_time += self.time_slot
+        self.current_time += self.vehicle_update_location_time_slot
         self.finish_all_orders()
 
     def trace_vehicles_info(self, print_vehicle=False) -> NoReturn:
@@ -255,7 +256,8 @@ class Simulator:
         self.platform_profit_trend.append(mechanism.platform_profit)
         self.serviced_orders_number_trend.append(len(mechanism.dispatched_orders))
         self.total_orders_number_trend.append(len(new_orders))
-        self.accumulate_service_ratio_trend.append(sum(self.serviced_orders_number_trend) / sum(self.total_orders_number_trend))
+        if sum(self.total_orders_number_trend) != 0:
+            self.accumulate_service_ratio_trend.append(sum(self.serviced_orders_number_trend) / sum(self.total_orders_number_trend))
         self.bidding_time_trend.append(mechanism.bidding_time)
         self.running_time_trend.append(mechanism.running_time)
         self.accumulate_service_distance_trend.append(sum([vehicle.service_driven_distance for vehicle in self.vehicles if vehicle.is_activated]))

@@ -81,5 +81,13 @@ class VehicleType:
     def random_driven_distance(self, distance: float):
         self._random_driven_distance = distance
 
+    @classmethod
+    def set_vehicle_speed(cls, vehicle_speed: float):
+        cls.vehicle_speed = vehicle_speed
+
+    @classmethod
+    def set_could_drive_distance(cls, could_drive_distance: float):
+        cls.could_drive_distance = could_drive_distance
+
 
 

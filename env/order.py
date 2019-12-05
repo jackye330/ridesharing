@@ -93,7 +93,7 @@ class Order:
         """
         从输入的csv文件中读取订单文件并逐个返回到外界
         :param start_time: 起始时间
-        :param time_slot: 时间间隔
+        :param time_slot: 间隔时间
         :param input_file: csv输入文件
         :return:
         """
@@ -249,7 +249,7 @@ def generate_real_orders_data(network: Network):
         pick_location = PickLocation(int(pick_index_series[i]))
         drop_location = DropLocation(int(drop_index_series[i]))
         order_distance = network.get_shortest_distance(pick_location, drop_location)
-        if is_enough_small(order_distance, DISTANCE_EPS) or order_distance == np.inf:  # 过于短的或者订单的距离是无穷大
+        if is_enough_small(order_distance, DISTANCE_EPS + 1000.0) or order_distance == np.inf:  # 过于短的或者订单的距离是无穷大
             continue
         n_riders = 2 if int(n_riders_series[i]) > 2 else int(n_riders_series[i])  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
         yield int(request_time_series[i]), np.random.choice(WAIT_TIMES), pick_index_series[i], drop_index_series[i], order_fare_series[i], order_distance, detour_ratio_series[i], n_riders

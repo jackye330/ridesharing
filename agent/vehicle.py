@@ -52,11 +52,11 @@ class Vehicle:
 
     @staticmethod
     def set_average_speed(average_speed: float) -> NoReturn:
-        VehicleType.vehicle_speed = average_speed
+        VehicleType.set_vehicle_speed(average_speed)
 
     @staticmethod
     def set_could_drive_distance(could_drive_distance: float) -> NoReturn:
-        VehicleType.could_drive_distance = could_drive_distance
+        VehicleType.set_could_drive_distance(could_drive_distance)
 
     @classmethod
     def set_proxy_bidder(cls, proxy_bidder: ProxyBidder) -> NoReturn:
@@ -322,7 +322,7 @@ def generate_real_vehicles_data(locations: List[VehicleLocation], vehicle_number
     from setting import FUEL_CONSUMPTION_DATA_FILE
     car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
     cars_info = car_fuel_consumption_info.sample(n=vehicle_number)
-    seats_info = cars_info["seats"].values.astype(np.int)
+    # seats_info = cars_info["seats"].values.astype(np.int)
     unit_cost_info = cars_info["fuel_consumption"].values.astype(np.float) * VEHICLE_FUEL_COST_RATIO
     seats = 4  # TODO 这一步是为了与order上限只有2对应的，以后可能需要修改
     return [(locations[vehicle_id].osm_index, seats, unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
@@ -330,7 +330,7 @@ def generate_real_vehicles_data(locations: List[VehicleLocation], vehicle_number
 
 def generate_grid_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
     from setting import UNIT_COSTS
-    from setting import N_SEATS
+    # from setting import N_SEATS
     unit_costs = np.random.choice(UNIT_COSTS, size=(vehicle_number,))
     seats = 4  # TODO 这一步是为了与order上限只有2对应的，以后可能需要修改
     return [(locations[vehicle_id].osm_index, seats, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]
