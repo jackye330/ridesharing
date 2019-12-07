@@ -106,7 +106,6 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
     cur_dists: float = vehicle_type.service_driven_distance
     cur_seats: int = vehicle_type.available_seats
     avg_speed: float = vehicle_type.vehicle_speed
-    v_loc: VehicleLocation = vehicle_type.location
 
     pick_up_dists_dict: Dict[Order, float] = dict()  # 记录每一个订单在被接到时行驶的距离
     detour_ratios_dict: Dict[Order, float] = dict()  # 记录每一个订单的绕路比
