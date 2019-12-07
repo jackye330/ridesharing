@@ -6,7 +6,7 @@ from array import array
 from collections import defaultdict
 from queue import Queue
 from typing import Set, List, Tuple
-
+from setting import POINT_LENGTH
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
@@ -151,7 +151,7 @@ class MarketClearingMatchingGraph(BipartiteGraph):
 
     def __init__(self, feasible_vehicles: Set[Vehicle], feasible_orders: Set[Order]):
         super(MarketClearingMatchingGraph, self).__init__(feasible_vehicles, feasible_orders)
-        self.epsilon = 0.1  # TODO 这递增值需要修改, 这个对于算法性能有很大的影响，这里暂时不使用这个算法
+        self.epsilon = 1 / np.power(10, POINT_LENGTH)  # TODO 这递增值需要修改, 这个对于算法性能有很大的影响，这里暂时不使用这个算法
 
     def _is_prefect_matching(self, orders_matches: List[array]):
         m_v = np.ones(shape=(self.vehicle_number,), dtype=np.int16) * -1

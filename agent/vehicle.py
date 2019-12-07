@@ -51,8 +51,8 @@ class Vehicle:
         self._earn_payoff: float = FLOAT_ZERO
 
     @staticmethod
-    def set_average_speed(average_speed: float) -> NoReturn:
-        VehicleType.set_vehicle_speed(average_speed)
+    def set_vehicle_speed(vehicle_speed: float) -> NoReturn:
+        VehicleType.set_vehicle_speed(vehicle_speed)
 
     @staticmethod
     def set_could_drive_distance(could_drive_distance: float) -> NoReturn:
@@ -96,7 +96,7 @@ class Vehicle:
         :param input_file: 路网
         :return:
         """
-        cls.set_average_speed(vehicle_speed)  # 初初始化车辆速度
+        cls.set_vehicle_speed(vehicle_speed)  # 初初始化车辆速度
         cls.set_could_drive_distance(vehicle_speed * time_slot)  # 初始化车辆的行驶
         cls.set_proxy_bidder(proxy_bidder)
         cls.set_route_planner(route_planner)

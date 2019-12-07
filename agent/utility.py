@@ -88,6 +88,3 @@ class VehicleType:
     @classmethod
     def set_could_drive_distance(cls, could_drive_distance: float):
         cls.could_drive_distance = could_drive_distance
-
-
-

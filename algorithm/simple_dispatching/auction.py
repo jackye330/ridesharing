@@ -8,7 +8,7 @@ from typing import List, Tuple, Set, NoReturn
 
 from agent.vehicle import Vehicle
 from algorithm.utility import Mechanism
-from algorithm.simple_dispatching.matching_graph import MaximumWeightMatchingGraph, BipartiteGraph
+from algorithm.simple_dispatching.matching_graph import MaximumWeightMatchingGraph, BipartiteGraph, MarketClearingMatchingGraph
 from algorithm.simple_dispatching.matching_pool import MatchingPairPool
 from env.network import Network
 from env.order import Order

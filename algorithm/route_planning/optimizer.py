@@ -16,16 +16,14 @@ __all__ = ["MaximizeProfitOptimizer", "MinimizeCostOptimizer", "Optimizer"]
 
 
 class Optimizer:
-    __slots__ = ["_optimal_value", "_optimal_route", "_optimal_route_info", "_corresponding_optimal_cost"]
+    __slots__ = ["_optimal_value", "_optimal_route", "_optimal_route_info"]
 
     def __init__(self, best_value: float):
         self._optimal_value = best_value
-        self._corresponding_optimal_cost = POS_INF
         self._optimal_route = None
         self._optimal_route_info = None
 
     def reset(self):
-        self._corresponding_optimal_cost = POS_INF
         self._optimal_route = None
         self._optimal_route_info = None
 
@@ -42,10 +40,6 @@ class Optimizer:
     @property
     def optimal_value(self) -> float:
         return self._optimal_value
-
-    @property
-    def corresponding_optimal_cost(self) -> float:
-        return self._corresponding_optimal_cost
 
     @property
     def optimal_route(self) -> List[OrderLocation]:
@@ -75,7 +69,6 @@ class MinimizeCostOptimizer(Optimizer):
             route_info.route_cost = get_route_cost_by_route_info(route_info, unit_cost)
             if self._optimal_value > route_info.route_cost:  # 这里不考虑浮点数精度问题，如果只是一点变好是没有必要优化的
                 self._optimal_value = route_info.route_cost
-                self._corresponding_optimal_cost = route_info.route_cost
                 self._optimal_route = route
                 self._optimal_route_info = route_info
 
@@ -100,9 +93,5 @@ class MaximizeProfitOptimizer(Optimizer):
             route_info.route_cost = get_route_cost_by_route_info(route_info, unit_cost)
             if self._optimal_value < route_info.route_profit:  # 这里不考虑浮点数精度问题，如果只是一点变好是没有必要优化的
                 self._optimal_value = route_info.route_profit
-                self._corresponding_optimal_cost = route_info.route_cost
                 self._optimal_route = route
                 self._optimal_route_info = route_info
-
-
-

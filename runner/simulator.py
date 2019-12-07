@@ -168,7 +168,7 @@ class Simulator:
             self.trace_vehicles_info()  # 车辆更新信息
             self.summary_each_round_result(new_orders)  # 统计匹配结果
             print(
-                "at {0} social welfare {1} driver payoffs {2} platform profit {3} empty vehicle ratio {4} service ratio {5} bidding time {6} running time {7}".format(
+                "at {0} social welfare {1:.2f} driver payoffs {2:.2f} platform profit {3:.2f} empty vehicle ratio {4:.4f} service ratio {5:.4f} bidding time {6:.4f} running time {7:.4f}".format(
                     current_time,
                     self.social_welfare_trend[-1],
                     self.total_driver_payoffs_trend[-1],

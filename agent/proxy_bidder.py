@@ -3,7 +3,8 @@
 # author : zlq16
 # date   : 2019/10/27
 from typing import Set, Dict, List
-
+import numpy as np
+from setting import POINT_LENGTH
 from agent.utility import OrderBid, VehicleType
 from algorithm.route_planning.planner import RoutePlanner
 from algorithm.route_planning.utility import get_route_info, get_route_cost_by_route_info, get_route_profit_by_route_info
@@ -61,7 +62,7 @@ class AdditionalCostBidder(ProxyBidder):
             else:
                 old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
                 old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
-            bid = OrderBid(new_cost - old_cost, planning_result.route, new_cost - old_cost)
+            bid = OrderBid(np.round(new_cost - old_cost, POINT_LENGTH), planning_result.route, np.round(new_cost - old_cost, POINT_LENGTH))
         else:
             bid = None
         return bid
@@ -102,7 +103,7 @@ class AdditionalProfitBidder(ProxyBidder):
                 old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
                 old_profit = other_info["old_profit"] if "old_profit" in other_info else get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
                 old_cost = other_info["old_cost"] if "old_cost" in other_info else get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
-            bid = OrderBid(new_profit - old_profit, planning_result.route, new_cost - old_cost)
+            bid = OrderBid(np.round(new_profit - old_profit, POINT_LENGTH), planning_result.route, np.round(new_cost - old_cost, POINT_LENGTH))
         else:
             bid = None
         return bid
