@@ -69,16 +69,15 @@ class AdditionalCostBidder(ProxyBidder):
 
     def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner,  old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
         old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
-        ##############################################
-        if not old_route_info.is_feasible:
-            raise Exception("存在问题，路径规划")
-        #######################################################
-        old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
         order_bids = dict()
-        for order in orders:
-            bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_cost=old_cost)
-            if bid is not None:
-                order_bids[order] = bid
+        if old_route_info.is_feasible:
+            old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+            for order in orders:
+                bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_cost=old_cost)
+                if bid is not None:
+                    order_bids[order] = bid
+        else:
+            raise Warning("这里存在路线规划问题")
         return order_bids
 
 
@@ -110,15 +109,14 @@ class AdditionalProfitBidder(ProxyBidder):
 
     def get_bids(self, vehicle_type: VehicleType, route_planner: RoutePlanner, old_route: List[OrderLocation], orders: Set[Order], current_time: int, network: Network, **other_info) -> Dict[Order, OrderBid]:
         old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
-        ##############################################
-        if not old_route_info.is_feasible:
-            raise Exception("存在问题，路径规划")
-        #######################################################
-        old_profit = get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
-        old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
         order_bids = dict()
-        for order in orders:
-            bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_profit=old_profit, old_cost=old_cost)
-            if bid is not None:
-                order_bids[order] = bid
+        if old_route_info.is_feasible:
+            old_profit = get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
+            old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
+            for order in orders:
+                bid = self.get_bid(vehicle_type, route_planner, old_route, order, current_time, network, old_profit=old_profit, old_cost=old_cost)
+                if bid is not None:
+                    order_bids[order] = bid
+        else:
+            raise Warning("这里存在路线规划问题")
         return order_bids

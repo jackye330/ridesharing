@@ -37,7 +37,7 @@ class VehicleType:
     """
     vehicle 用这个类与外界进行交互
     """
-    __slots__ = ["_location", "_available_seats", "_unit_cost", "_service_driven_distance", "_random_driven_distance"]
+    __slots__ = ["_location", "_available_seats", "_unit_cost", "_service_driven_distance", "_random_driven_distance", "_assigned_order_number"]
 
     vehicle_speed: float = None  # 车辆的平均速度
     could_drive_distance: float = None  # 一个分配时间可以行驶的距离
@@ -48,6 +48,15 @@ class VehicleType:
         self._unit_cost = unit_cost
         self._service_driven_distance = service_driven_distance
         self._random_driven_distance = random_driven_distance
+        self._assigned_order_number = 0  # 已经分配的订单数目
+
+    @property
+    def assigned_order_number(self) -> int:
+        return self._assigned_order_number
+
+    @assigned_order_number.setter
+    def assigned_order_number(self, value: int):
+        self._assigned_order_number = value
 
     @property
     def location(self) -> VehicleLocation:

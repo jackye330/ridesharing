@@ -121,11 +121,10 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             if cur_seats < 0:  # 座位数目是不可行的
                 break
             # 计算接送时间，判断是否可以接到订单
-            upper_time = belong_order.request_time + belong_order.wait_time - current_time
-            if network.is_smaller_bound_distance(cur_dists - old_dists, avg_speed * upper_time):  # 计算到达时间是否超出于其的要求
+            dll_dists = (belong_order.request_time + belong_order.wait_time - current_time) * avg_speed + old_dists
+            if network.is_smaller_bound_distance(cur_dists, dll_dists):  # 计算到达时间是否超出于其的要求
                 pick_up_dists_dict[belong_order] = cur_dists  # 更新接乘客已经行驶的里程
             else:  # 无法满足最大等待时间
-                # raise Exception("接送距离存在问题")
                 break
         else:
             cur_seats += belong_order.n_riders
@@ -134,7 +133,6 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_order.detour_distance):
                 detour_ratios_dict[belong_order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / belong_order.order_distance
             else:  # 无法满足绕路比, 或者绕路比是有问题的路径规划
-                # raise Exception("绕路距离存在问题")
                 break
     else:
         return RouteInfo(True, cur_dists - old_dists, detour_ratios_dict)

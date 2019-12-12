@@ -17,10 +17,10 @@ MILE_TO_M = 1609.344
 SECOND_OF_DAY = 86_400  # 24 * 60 * 60 一天有多少秒
 
 # real_transport 和 grid_transport 实验都可以使用的数据 ######################################################################################################################
-# 实验得环境 为"REAL_TRANSPORT"表示真实的路网环境 为"GRID_TRANSPORT"表示虚拟网格环境
-REAL_TRANSPORT = "REAL_TRANSPORT"
-GRID_TRANSPORT = "GRID_TRANSPORT"
-EXPERIMENTAL_MODE = REAL_TRANSPORT
+# 实验得环境 为"ROAD_MODE"表示真实的路网环境 为"GRID_MODE"表示虚拟网格环境
+ROAD_MODE = "ROAD_MODE"
+GRID_MODE = "GRID_MODE"
+EXPERIMENTAL_MODE = ROAD_MODE
 # 一组参数实验的重复次数
 MAX_REPEATS = 10
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
@@ -32,7 +32,7 @@ MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
-MIN_REQUEST_TIME, MAX_REQUEST_TIME = 21 * 60 * 60, 22 * 60 * 60
+MIN_REQUEST_TIME, MAX_REQUEST_TIME = 21 * 60 * 60, 21 * 60 * 60 + 30
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 500
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 MILE_TO_KM * 12 / 3.6 m/s
@@ -77,7 +77,14 @@ GEO_DATA_FILE = {
     "adjacent_location_goal_index_file": "{0}/adjacent_location_goal_index.pkl".format(TIME_SLOT),
 }
 # 订单数据存放地址
-ORDER_DATA_FILES = ["../data/{0}/order_data/order_data_{1:03}.csv".format(GEO_NAME, day) for day in range(MIN_REQUEST_DAY, MAX_REQUEST_DAY)]
+ORDER_DATA_FILES = {
+    "pick_region_model": "../data/{0}/order_data/pick_region_model.pkl".format(GEO_NAME),
+    "drop_region_model": "../data/{0}/order_data/drop_region_model.pkl".format(GEO_NAME),
+    "demand_model_file": "../data/{0}/order_data/demand_model.npy".format(GEO_NAME),
+    "demand_location_model_file": "../data/{0}/order_data/demand_location_model.npy".format(GEO_NAME),
+    "demand_transfer_model_file": "../data/{0}/order_data/demand_transfer_model.npy".format(GEO_NAME),
+    "unit_fare_model": "../data/{0}/order_data/unit_fare_model.npy".format(GEO_NAME),
+}
 # 车辆油耗与座位数据存放地址
 FUEL_CONSUMPTION_DATA_FILE = "../data/vehicle_data/fuel_consumption_and_seats.csv"
 # 直接与此常数相乘可以得到单位距离的成本 $/m/(单位油耗)

@@ -6,16 +6,16 @@ from typing import List, NoReturn, Set
 from agent.platform import Platform
 from agent.utility import VehicleType
 from agent.proxy_bidder import AdditionalProfitBidder, AdditionalCostBidder
-from agent.vehicle import Vehicle, generate_real_vehicles_data, generate_grid_vehicles_data
+from agent.vehicle import Vehicle, generate_road_vehicles_data, generate_grid_vehicles_data
 from algorithm.generic_dispatching.auction import second_price_sequence_auction
 from algorithm.generic_dispatching.baseline import sparp_mechanism, nearest_vehicle_dispatching
 from algorithm.route_planning.planner import InsertingPlanner, ReschedulingPlanner
 from algorithm.simple_dispatching.auction import vcg_mechanism, greedy_mechanism
 from setting import INSERTING, RESCHEDULING, VEHICLE_SPEED
 from setting import MINIMIZE_COST, MAXIMIZE_PROFIT
-from setting import REAL_TRANSPORT, GRID_TRANSPORT, ADDITIONAL_COST_STRATEGY, ADDITIONAL_PROFIT_STRATEGY, NEAREST_DISPATCHING, VCG_MECHANISM, GM_MECHANISM, SPARP_MECHANISM, SEQUENCE_AUCTION
-from env.graph import BaseGraph, generate_grid_graph, generate_real_graph
-from env.order import Order, generate_real_orders_data, generate_grid_orders_data
+from setting import ROAD_MODE, GRID_MODE, ADDITIONAL_COST_STRATEGY, ADDITIONAL_PROFIT_STRATEGY, NEAREST_DISPATCHING, VCG_MECHANISM, GM_MECHANISM, SPARP_MECHANISM, SEQUENCE_AUCTION
+from env.graph import BaseGraph, generate_grid_graph, generate_road_graph
+from env.order import Order, generate_road_orders_data, generate_grid_orders_data
 from env.network import Network
 from setting import BIDDING_STRATEGY, DISPATCHING_METHOD, EXPERIMENTAL_MODE, ROUTE_PLANNING_GOAL
 from setting import TIME_SLOT, VEHICLE_NUMBER, MIN_REQUEST_TIME, MIN_REQUEST_DAY, SECOND_OF_DAY, INT_ZERO
@@ -35,11 +35,11 @@ class Simulator:
     ]
 
     def __init__(self):
-        if EXPERIMENTAL_MODE == REAL_TRANSPORT:
-            BaseGraph.set_generate_graph_function(generate_real_graph)
-            Vehicle.set_generate_vehicles_function(generate_real_vehicles_data)
-            Order.set_order_generator(generate_real_orders_data)
-        elif EXPERIMENTAL_MODE == GRID_TRANSPORT:
+        if EXPERIMENTAL_MODE == ROAD_MODE:
+            BaseGraph.set_generate_graph_function(generate_road_graph)
+            Vehicle.set_generate_vehicles_function(generate_road_vehicles_data)
+            Order.set_order_generator(generate_road_orders_data)
+        elif EXPERIMENTAL_MODE == GRID_MODE:
             BaseGraph.set_generate_graph_function(generate_grid_graph)
             Vehicle.set_generate_vehicles_function(generate_grid_vehicles_data)
             Order.set_order_generator(generate_grid_orders_data)

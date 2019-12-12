@@ -12,7 +12,7 @@ from env.network import Network
 from setting import FLOAT_ZERO, DISTANCE_EPS, DETOUR_RATIOS, WAIT_TIMES, INT_ZERO
 from utility import is_enough_small
 
-__all__ = ["Order", "generate_real_orders_data", "generate_grid_orders_data"]
+__all__ = ["Order", "generate_road_orders_data", "generate_grid_orders_data"]
 
 
 class Order:
@@ -227,32 +227,47 @@ class Order:
         self._real_service_time = real_finish_time - self._request_time - self._real_wait_time  # 这个订单被完成花费的时间
 
 
-def generate_real_orders_data(network: Network):
+def generate_road_orders_data(network: Network):
     """
     实际路网环境中的订单生成和时间流逝
     :return:
     """
-    # 订单的生成器
+    # 这个是由真实的订单数据的生成需要的结果
+    # from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
+    # from setting import GEO_NAME
+    # from setting import MIN_REQUEST_DAY, MAX_REQUEST_DAY
+    # order_data_files = ["../data/{0}/order_data/order_data_{1:03}.csv".format(GEO_NAME, day) for day in range(MIN_REQUEST_DAY, MAX_REQUEST_DAY)]
+    # order_data = pd.read_csv(order_data_files[0])
+    # order_data = order_data[MIN_REQUEST_TIME <= order_data["pick_time"]]
+    # order_data = order_data[MAX_REQUEST_TIME > order_data["pick_time"]]
+    # request_time_series = order_data["pick_time"].values
+    # pick_index_series = order_data["pick_index"].values
+    # drop_index_series = order_data["drop_index"].values
+    # n_riders_series = order_data["n_riders"].values
+    # order_fare_series = order_data["order_fare"].values  # 我们不考虑订单的中tip成分
+    # order_number = order_data.shape[0]
+    # detour_ratio_series = np.random.choice(DETOUR_RATIOS, size=(order_number,))
+    # for i in range(order_number):
+    #     pick_location = PickLocation(int(pick_index_series[i]))
+    #     drop_location = DropLocation(int(drop_index_series[i]))
+    #     order_distance = network.get_shortest_distance(pick_location, drop_location)
+    #     if is_enough_small(order_distance, DISTANCE_EPS + 1000.0) or order_distance == np.inf:  # 过于短的或者订单的距离是无穷大
+    #         continue
+    #     n_riders = 2 if int(n_riders_series[i]) > 2 else int(n_riders_series[i])  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
+    #     yield int(request_time_series[i]), np.random.choice(WAIT_TIMES), pick_index_series[i], drop_index_series[i], order_fare_series[i], order_distance, detour_ratio_series[i], n_riders
+    # 这个是将30天的数据合并之后的结果
     from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
+    from preprocess.order_process.region_cluster_model import RegionModel
     from setting import ORDER_DATA_FILES
-    order_data = pd.read_csv(ORDER_DATA_FILES[0])
-    order_data = order_data[MIN_REQUEST_TIME <= order_data["pick_time"]]
-    order_data = order_data[MAX_REQUEST_TIME > order_data["pick_time"]]
-    request_time_series = order_data["pick_time"].values
-    pick_index_series = order_data["pick_index"].values
-    drop_index_series = order_data["drop_index"].values
-    n_riders_series = order_data["n_riders"].values
-    order_fare_series = order_data["order_fare"].values  # 我们不考虑订单的中tip成分
-    order_number = order_data.shape[0]
-    detour_ratio_series = np.random.choice(DETOUR_RATIOS, size=(order_number,))
-    for i in range(order_number):
-        pick_location = PickLocation(int(pick_index_series[i]))
-        drop_location = DropLocation(int(drop_index_series[i]))
-        order_distance = network.get_shortest_distance(pick_location, drop_location)
-        if is_enough_small(order_distance, DISTANCE_EPS + 1000.0) or order_distance == np.inf:  # 过于短的或者订单的距离是无穷大
-            continue
-        n_riders = 2 if int(n_riders_series[i]) > 2 else int(n_riders_series[i])  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
-        yield int(request_time_series[i]), np.random.choice(WAIT_TIMES), pick_index_series[i], drop_index_series[i], order_fare_series[i], order_distance, detour_ratio_series[i], n_riders
+    import pickle
+    with open(ORDER_DATA_FILES["pick_region_model"], "rb") as file:
+        pick_region_model: RegionModel = pickle.load(file)
+    with open(ORDER_DATA_FILES["drop_region_model"], "rb") as file:
+        drop_region_model: RegionModel = pickle.load(file)
+    unit_fare_model = np.load("unit_fare_model")
+    demand_model = np.load(ORDER_DATA_FILES["demand_model_file"])
+    demand_location_model = np.load(ORDER_DATA_FILES["demand_location_model_file"])
+    demand_transfer_model = np.load(ORDER_DATA_FILES["demand_transfer_model_file"])
 
 
 def generate_grid_orders_data(network: Network):

@@ -15,7 +15,7 @@ from env.location import DropLocation, PickLocation, VehicleLocation, OrderLocat
 from env.network import Network
 from env.order import Order
 
-__all__ = ["Vehicle", "generate_grid_vehicles_data", "generate_real_vehicles_data"]
+__all__ = ["Vehicle", "generate_grid_vehicles_data", "generate_road_vehicles_data"]
 
 
 class Vehicle:
@@ -107,6 +107,10 @@ class Vehicle:
             each_vehicle_data = vehicle_raw_data.iloc[vehicle_id, :]
             vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), each_vehicle_data["seats"], each_vehicle_data["unit_cost"]))
         return vehicles
+
+    @property
+    def assigned_order_number(self) -> int:
+        return self.vehicle_type.assigned_order_number
 
     @property
     def vehicle_id(self) -> int:
@@ -318,7 +322,7 @@ class Vehicle:
         return isinstance(other, self.__class__) and self.vehicle_id == other.vehicle_id
 
 
-def generate_real_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
+def generate_road_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
     from setting import FUEL_CONSUMPTION_DATA_FILE
     car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
     cars_info = car_fuel_consumption_info.sample(n=vehicle_number)

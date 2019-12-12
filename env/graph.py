@@ -13,7 +13,7 @@ from env.location import OrderLocation, VehicleLocation
 from utility import is_enough_small
 from utility import singleton
 
-__all__ = ["BaseGraph", "generate_grid_graph", "generate_real_graph"]
+__all__ = ["BaseGraph", "generate_grid_graph", "generate_road_graph"]
 
 
 class BaseGraph:
@@ -88,7 +88,7 @@ class BaseGraph:
 
 
 @singleton
-class RealGraph(BaseGraph):
+class RoadGraph(BaseGraph):
     """
     实际的交通路网图
     shortest_distance: 两个节点最短路径距离矩阵
@@ -103,14 +103,14 @@ class RealGraph(BaseGraph):
     """
     __slots__ = ["_shortest_distance", "_shortest_path", "_access_osm_index", "_adjacent_location_osm_index", "_adjacent_location_driven_distance", "_adjacent_location_goal_index", "_index_set"]
 
-    def __init__(self, shortest_distance: np.ndarray, shortest_path: np.ndarray, access_index: List[array], adjacent_location_osm_index: List[array], adjacent_location_driven_distance: List[array], adjacent_location_goal_index: List[array]):
+    def __init__(self, shortest_distance: np.ndarray, shortest_path: np.ndarray, access_index: List[array]):
         """
         :param shortest_distance: 两个节点最短路径距离矩阵
         :param shortest_path: 两个节点最短路径矩阵  shortest_path[i,j]->k 表示i到j的最短路径需要经过k
         :param access_index: 表示车辆在某一个节点上可以到达的节点
-        :param adjacent_location_osm_index: 保存车辆下一个时间间隔可以到达的节点
-        :param adjacent_location_driven_distance: 保存车辆下一个时间间隔可以到达的节点 还会多行驶的一段距离
-        :param adjacent_location_goal_index: 保存车辆下一个时间间隔可以到达的节点 多行驶距离的朝向节点
+        # :param adjacent_location_osm_index: 保存车辆下一个时间间隔可以到达的节点
+        # :param adjacent_location_driven_distance: 保存车辆下一个时间间隔可以到达的节点 还会多行驶的一段距离
+        # :param adjacent_location_goal_index: 保存车辆下一个时间间隔可以到达的节点 多行驶距离的朝向节点
         ------
         注意：
         shortest_distance 用于查询任意两点之间的最短路径长度 单位长度m
@@ -124,9 +124,6 @@ class RealGraph(BaseGraph):
         self._shortest_distance = shortest_distance
         self._shortest_path = shortest_path
         self._access_osm_index = access_index
-        self._adjacent_location_osm_index = adjacent_location_osm_index
-        self._adjacent_location_driven_distance = adjacent_location_driven_distance
-        self._adjacent_location_goal_index = adjacent_location_goal_index
         self._index_set = np.array(list(range(shortest_distance.shape[0])), dtype=np.int16)
 
     def _get_random_osm_index(self) -> int:
@@ -370,51 +367,29 @@ class GridGraph(BaseGraph):
         return real_drive_distance
 
 
-def generate_real_graph() -> BaseGraph:
+def generate_road_graph() -> BaseGraph:
     """
     生成实际的图
     :return:
     """
     import os
     import pickle
-    # import osmnx as ox
     from setting import GEO_DATA_FILE
     geo_data_base_folder = GEO_DATA_FILE["base_folder"]
-    # graph_file = GEO_DATA_FILE["graph_file"]
-    # osm_id2index_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["osm_id2index_file"])
-    # index2osm_id_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["index2osm_id_file"])
     shortest_distance_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["shortest_distance_file"])
     shortest_path_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["shortest_path_file"])
     access_index_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["access_index_file"])
-    adjacent_location_osm_index_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["adjacent_location_osm_index_file"])
-    adjacent_location_driven_distance_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["adjacent_location_driven_distance_file"])
-    adjacent_location_goal_index_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["adjacent_location_goal_index_file"])
 
-    # raw_graph = ox.load_graphml(graph_file, folder=geo_data_base_folder)
     shortest_distance = np.load(shortest_distance_file)
     shortest_path = np.load(shortest_path_file)
     with open(access_index_file, "rb") as file:
         access_index = pickle.load(file)
-    with open(adjacent_location_osm_index_file, "rb") as file:
-        adjacent_location_osm_index = pickle.load(file)
-    with open(adjacent_location_driven_distance_file, "rb") as file:
-        adjacent_location_driven_distance = pickle.load(file)
-    with open(adjacent_location_goal_index_file, "rb") as file:
-        adjacent_location_goal_index = pickle.load(file)
-    # with open(osm_id2index_file, "rb") as file:
-    #     osm_id2index = pickle.load(file)
-    # with open(index2osm_id_file, "rb") as file:
-    #     index2osm_id = pickle.load(file)
 
-    # index2location = {osm_id2index[node[0]]: (node[1]['x'], node[1]['y']) for node in raw_graph.nodes(data=True)}
-
-    return RealGraph(
+    return RoadGraph(
         shortest_distance=shortest_distance,
         shortest_path=shortest_path,
-        access_index=access_index,
-        adjacent_location_osm_index=adjacent_location_osm_index,
-        adjacent_location_driven_distance=adjacent_location_driven_distance,
-        adjacent_location_goal_index=adjacent_location_goal_index)
+        access_index=access_index
+    )
 
 
 def generate_grid_graph() -> BaseGraph:

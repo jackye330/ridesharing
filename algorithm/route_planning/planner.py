@@ -133,7 +133,7 @@ class InsertingPlanner(RoutePlanner):
 
     def planning(self, vehicle_type: VehicleType, old_route: List[OrderLocation], order: Order, current_time: int, network: Network) -> PlanningResult:
         self.reset()  # 优化器初始化！！！！
-        if pre_check_need_to_planning(vehicle_type, order, current_time, network) and len(old_route) <= UPPER_ROUTE_LENGTH:  # 人数都不满足要求不用往后执行
+        if pre_check_need_to_planning(vehicle_type, order, current_time, network):  # 人数都不满足要求不用往后执行
             self.planning2(vehicle_type, old_route, order, current_time, network)
         return super(InsertingPlanner, self).summary_planning_result()
 
@@ -193,7 +193,10 @@ class ReschedulingPlanner(RoutePlanner):
                             _rem_list_copy.append(belong_o.drop_location)
                             pick_up_dists_dict[belong_o] = arr
                             _recursion(_cur_loc_list, _rem_list_copy, seats - belong_o.n_riders, arr)
-                            pick_up_dists_dict.pop(belong_o)
+                            try:
+                                pick_up_dists_dict.pop(belong_o)
+                            except Exception as e:
+                                pass
                     else:
                         real_detour_dist = arr - (pick_up_dists_dict[belong_o] if belong_o in pick_up_dists_dict else belong_o.pick_up_distance) - belong_o.order_distance
                         if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_o.detour_distance):
@@ -204,7 +207,7 @@ class ReschedulingPlanner(RoutePlanner):
                     _cur_loc_list.pop()
 
         self.reset()  # 优化器初始化！！！！
-        if pre_check_need_to_planning(vehicle_type, order, current_time, network) and len(old_route) <= UPPER_ROUTE_LENGTH:  # 人数都不满足要求不用往后执行
+        if pre_check_need_to_planning(vehicle_type, order, current_time, network):  # 人数都不满足要求不用往后执行
             pick_up_dists_dict: Dict[Order, float] = dict()
             detour_ratios_dict: Dict[Order, float] = dict()
             avg_speed: float = vehicle_type.vehicle_speed
