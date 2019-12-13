@@ -4,7 +4,6 @@
 # date   : 2019/2/22
 from typing import List, NoReturn, Set
 from agent.platform import Platform
-from agent.utility import VehicleType
 from agent.proxy_bidder import AdditionalProfitBidder, AdditionalCostBidder
 from agent.vehicle import Vehicle, generate_road_vehicles_data, generate_grid_vehicles_data
 from algorithm.generic_dispatching.auction import second_price_sequence_auction
@@ -99,7 +98,7 @@ class Simulator:
         :return:
         """
         Vehicle.generate_vehicles_data(VEHICLE_NUMBER, self.network, vehicles_data_save_file)
-        Order.generate_orders_data(self.network, orders_data_save_file)
+        Order.generate_orders_data(orders_data_save_file, self.network)
 
     def load_env(self, vehicles_data_file, orders_data_file):
         """

@@ -16,12 +16,12 @@ G = ox.load_graphml("Manhattan.graphml", "../../data/Manhattan/network_data")
 nodes = G.nodes(data=True)
 index2point = {osm_id2index[node[0]]: (node[1]["x"], node[1]['y']) for node in nodes}
 
-point_file = open("../raw_data/points.csv", "w")
+point_file = open("../raw_data/temp/points.csv", "w")
 point_file.write("pick_index,drop_index,pick_lon,pick_lat,drop_lon,drop_lat\n")
 weekends = {3, 4, 10, 11, 17, 18, 24, 25}  # 我们对于周末不感兴趣
 weekday = set(range(30)) - weekends
 for day in weekday:
-    df = pd.read_csv("../../data/Manhattan/order_data/order_data_{0:03d}.csv".format(day))
+    df = pd.read_csv("../raw_data/temp/Manhattan/order_data_{0:03d}.csv".format(day))
     pick_indexes = df.pick_index.values
     drop_indexes = df.drop_index.values
     for i in range(len(pick_indexes)):

@@ -10,13 +10,13 @@ import pandas as pd
 # weekday = set(range(30)) - weekends
 # for i, day in enumerate(weekday):
 #     r, c = i // 5, i % 5
-#     df = pd.read_csv("../../data/Manhattan/order_data/order_data_{:03d}.csv".format(day))
+#     df = pd.read_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day))
 #     ax[r][c].hist(df.pick_time.values)
 #
 # plt.show()
 
 plt.figure()
-demand_model = np.load("../../data/Manhattan/order_data/order_model/demand_model.npy")
+demand_model = np.load("../../data/Manhattan/order_data/demand_model.npy")
 plt.plot(range(len(demand_model)), demand_model, 'r-d', linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
 plt.xlim([0, 23])
 plt.xlabel("Hour of Day")
@@ -25,7 +25,7 @@ plt.grid(True)
 plt.show()
 
 plt.figure()
-unit_fare = np.load("../../data/Manhattan/order_data/order_model/unit_fare_model.npy")
+unit_fare = np.load("../../data/Manhattan/order_data/unit_fare_model.npy")
 plt.plot(range(len(unit_fare)), unit_fare, 'r-d', linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
 plt.xlabel("Hour of Day")
 plt.ylabel("Unit Fare of Day ($/mile)")
@@ -35,7 +35,7 @@ plt.grid(True)
 plt.show()
 
 plt.figure()
-demand_location_model = np.load("../../data/Manhattan/order_data/order_model/demand_location_model.npy")
+demand_location_model = np.load("../../data/Manhattan/order_data/demand_location_model.npy")
 plt.plot(range(len(demand_location_model[0])), demand_location_model[0], "r-d", linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
 plt.plot(range(len(demand_location_model[23])), demand_location_model[23], "b-d", linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
 plt.xlabel("Pick up Region of Id")
@@ -43,11 +43,11 @@ plt.grid(True)
 plt.show()
 
 plt.figure()
-demand_transfer_model = np.load("../../data/Manhattan/order_data/order_model/demand_transfer_model.npy")
-drop_transfer = np.multiply(demand_transfer_model[0], demand_location_model[0].reshape(len(demand_location_model[0]), 1))
+demand_transfer_model = np.load("../../data/Manhattan/order_data/demand_transfer_model.npy")
+drop_transfer = demand_transfer_model[0].T * demand_location_model[0]
 drop_transfer = np.sum(drop_transfer, axis=0)
 plt.plot(range(len(drop_transfer)), drop_transfer, "r-o",  linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
-drop_transfer = np.multiply(demand_transfer_model[1], demand_location_model[1].reshape(len(demand_location_model[1]), 1))
+drop_transfer = demand_transfer_model[1].T * demand_location_model[1]
 drop_transfer = np.sum(drop_transfer, axis=0)
 plt.plot(range(len(drop_transfer)), drop_transfer, "b-o",  linewidth=3, markersize=10, markerfacecolor='k', markeredgewidth=3)
 plt.xlabel("Drop off Region of Id")

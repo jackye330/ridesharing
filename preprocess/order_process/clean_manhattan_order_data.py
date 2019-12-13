@@ -45,11 +45,9 @@ manhattan_order_data = manhattan_order_data[(manhattan_order_data.order_distance
 manhattan_order_data = manhattan_order_data[(manhattan_order_data.order_fare - 2.5) / manhattan_order_data.order_distance > 1.3]
 manhattan_order_data = manhattan_order_data[(manhattan_order_data.order_fare - 2.5) / manhattan_order_data.order_distance < 10]
 
-# manhattan_order_data.to_csv("../raw_data/temp/Manhattan/manhattan_order_temp.csv", index=False)
-
 # 保存订单数据
 for day, df_day in manhattan_order_data.groupby("day"):
     day = int(day)
-    df_day.sort_values(by=["pick_time", "order_time"], inplace=True)
+    df_day = df_day.sort_values(by="pick_time", axis=0, ascending=True)
     df_day.drop(columns=["day"], axis=1, inplace=True)
-    df_day.to_csv("../../data/Manhattan/order_data/order_data_{:03d}.csv".format(day-1), index=False)
+    df_day.to_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day-1), index=False)

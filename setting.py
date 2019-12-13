@@ -32,7 +32,7 @@ MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
-MIN_REQUEST_TIME, MAX_REQUEST_TIME = 21 * 60 * 60, 21 * 60 * 60 + 30
+MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 500
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 MILE_TO_KM * 12 / 3.6 m/s
@@ -83,7 +83,7 @@ ORDER_DATA_FILES = {
     "demand_model_file": "../data/{0}/order_data/demand_model.npy".format(GEO_NAME),
     "demand_location_model_file": "../data/{0}/order_data/demand_location_model.npy".format(GEO_NAME),
     "demand_transfer_model_file": "../data/{0}/order_data/demand_transfer_model.npy".format(GEO_NAME),
-    "unit_fare_model": "../data/{0}/order_data/unit_fare_model.npy".format(GEO_NAME),
+    "unit_fare_model_file": "../data/{0}/order_data/unit_fare_model.npy".format(GEO_NAME),
 }
 # 车辆油耗与座位数据存放地址
 FUEL_CONSUMPTION_DATA_FILE = "../data/vehicle_data/fuel_consumption_and_seats.csv"

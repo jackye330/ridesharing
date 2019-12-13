@@ -10,12 +10,11 @@
 import pickle
 import numpy as np
 import pandas as pd
-from preprocess.order_process.region_cluster_model import RegionModel
+from preprocess.utility import RegionModel
 
-
-with open("../../data/Manhattan/order_data/order_model/pick_region_model.pkl", "rb") as file1:
+with open("../../data/Manhattan/order_data/pick_region_model.pkl", "rb") as file1:
     pick_region_model: RegionModel = pickle.load(file1)
-with open("../../data/Manhattan/order_data/order_model/drop_region_model.pkl", "rb") as file2:
+with open("../../data/Manhattan/order_data/drop_region_model.pkl", "rb") as file2:
     drop_region_model: RegionModel = pickle.load(file2)
 
 weekends = {3, 4, 10, 11, 17, 18, 24, 25}  # 我们对于周末不感兴趣
@@ -26,7 +25,7 @@ demand_prob_location_of_time = np.zeros(shape=(len(weekday), 24, pick_region_mod
 demand_prob_transfer_of_time = np.zeros(shape=(len(weekday), 24, pick_region_model.region_number, drop_region_model.region_number), dtype=np.float32)
 
 for i, day in enumerate(weekday):  # 学习概率在不同的时刻不同位置的转移概率
-    order_data_day = pd.read_csv("../../data/Manhattan/order_data/order_data_{:03d}.csv".format(day))
+    order_data_day = pd.read_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day))
     for j in range(24):
         demand = order_data_day[order_data_day.pick_time >= j * 3600]
         demand = demand[demand.pick_time < (j+1) * 3600]
@@ -58,7 +57,7 @@ for time in range(24):
     for pick_region_id in range(pick_region_model.region_number):
         demand_prob_transfer_of_time[time, pick_region_id] = demand_prob_transfer_of_time[time, pick_region_id] / np.sum(demand_prob_transfer_of_time[time, pick_region_id])
 
-np.save("../../data/Manhattan/order_data/order_model/unit_fare_model.npy", unit_fare)
-np.save("../../data/Manhattan/order_data/order_model/demand_model.npy", demand_num_of_time)
-np.save("../../data/Manhattan/order_data/order_model/demand_location_model.npy", demand_prob_location_of_time)
-np.save("../../data/Manhattan/order_data/order_model/demand_transfer_model.npy", demand_prob_transfer_of_time)
+np.save("../../data/Manhattan/order_data/unit_fare_model.npy", unit_fare)
+np.save("../../data/Manhattan/order_data/demand_model.npy", demand_num_of_time)
+np.save("../../data/Manhattan/order_data/demand_location_model.npy", demand_prob_location_of_time)
+np.save("../../data/Manhattan/order_data/demand_transfer_model.npy", demand_prob_transfer_of_time)
