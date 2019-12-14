@@ -5,15 +5,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-# f, ax = plt.subplots(5, 5)
-# weekends = {3, 4, 10, 11, 17, 18, 24, 25}
-# weekday = set(range(30)) - weekends
-# for i, day in enumerate(weekday):
-#     r, c = i // 5, i % 5
-#     df = pd.read_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day))
-#     ax[r][c].hist(df.pick_time.values)
-#
-# plt.show()
+f, ax = plt.subplots(5, 5)
+weekends = {3, 4, 10, 11, 17, 18, 24, 25}
+weekday = set(range(30)) - weekends
+for i, day in enumerate(weekday):
+    r, c = i // 5, i % 5
+    df = pd.read_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day))
+    ax[r][c].hist(df.pick_time.values)
+plt.show()
+
+f, ax = plt.subplots(5, 5)
+for i, day in enumerate(weekday):
+    r, c = i // 5, i % 5
+    df = pd.read_csv("../raw_data/temp/Manhattan/order_data_{:03d}.csv".format(day))
+    unit_fare = np.zeros(shape=24)
+    for j in range(24):
+        d = df[(df.pick_time >= j * 3600) & (df.pick_time < (j + 1) * 3600)]
+        unit_fare[j] = np.mean((d["order_fare"] / d["order_distance"]).values)
+    ax[r][c].plot(unit_fare)
+plt.show()
 
 plt.figure()
 demand_model = np.load("../../data/Manhattan/order_data/demand_model.npy")

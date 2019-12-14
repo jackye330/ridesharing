@@ -4,7 +4,6 @@
 # date   : 2019/12/11
 import os
 import pickle
-from setting import Manhattan
 from setting import MILE_TO_M
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,7 +12,7 @@ import numpy as np
 manhattan_order_data = pd.read_csv("../raw_data/temp/Manhattan/manhattan_order_temp.csv")
 
 # 首先转换osm_id -> index
-with open(os.path.join("../../data/{0}/network_data/".format(Manhattan), "osm_id2index.pkl"), "rb") as file:
+with open(os.path.join("../../data/Manhattan/network_data/", "osm_id2index.pkl"), "rb") as file:
     osm_id2index = pickle.load(file)
 manhattan_order_data["pick_index"] = np.array(list(map(lambda osm_id: osm_id2index[osm_id], manhattan_order_data["pick_osm_id"].values)))
 manhattan_order_data["drop_index"] = np.array(list(map(lambda osm_id: osm_id2index[osm_id], manhattan_order_data["drop_osm_id"].values)))
@@ -22,10 +21,6 @@ manhattan_order_data = manhattan_order_data.drop(columns=["pick_osm_id", "drop_o
 # 求解订单行驶时间, 并修改相关标签名
 manhattan_order_data["order_time"] = manhattan_order_data["drop_time"] - manhattan_order_data["pick_time"]
 manhattan_order_data = manhattan_order_data.drop(["drop_time"], axis=1)
-manhattan_order_data = manhattan_order_data.rename(columns={"trip_distance": "order_distance",
-                                                            "fare_amount": "order_fare",
-                                                            "tip_amount": "order_tip",
-                                                            "total_amount": "total_fare"})
 
 # 剔除距离上比较奇怪的数据
 shortest_distance = np.load("../../data/Manhattan/network_data/shortest_distance.npy")

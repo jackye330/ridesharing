@@ -3,15 +3,13 @@
 # author : zlq16
 # date   : 2019/11/14
 import os
-import time
 import pickle
 import osmnx as ox
 import pandas as pd
-from setting import HaiKou
 from setting import GEO_DATA_FILE
 
-result_dir = "../../data/{0}/order_data".format(HaiKou)
-temp_dir = "../raw_data/temp/{0}/".format(HaiKou)
+result_dir = "../../data/Hai_Kou/order_data"
+temp_dir = "../raw_data/temp/Hai_Kou/"
 eps = 0.001
 
 
@@ -26,7 +24,7 @@ def list2str(lis):
 
 # 筛选需要的字段
 for file_index in range(1, 9):
-	raw_order_filename = os.path.join("../raw_data/{0}_raw_data".format(HaiKou), "dwv_order_make_haikou_{0}.txt".format(file_index))
+	raw_order_filename = os.path.join("../raw_data/Hai_Kou_raw_data", "dwv_order_make_haikou_{0}.txt".format(file_index))
 	temp1_file = open(os.path.join(temp_dir, "order_make_haikou_{0}.csv".format(file_index)), "w")
 	with open(raw_order_filename, "r") as file:
 		idx = 0
@@ -61,9 +59,9 @@ for date, file in date2file.items():
 	file.close()
 
 # 按时间排序且点对齐
-G = ox.load_graphml(HaiKou + ".graph" + "ml", "../../data/{0}/network_data".format(HaiKou))  # 注意：".graph"+"ml" 是不为了飘绿色
+G = ox.load_graphml("Hai_Kou.graph" + "ml", "../raw_data/Hai_Kou_raw_data")  # 注意：".graph"+"ml" 是不为了飘绿色
 osm_id2index_file = GEO_DATA_FILE["osm_id2index_file"]
-with open("../../data/{0}/network_data/".format(HaiKou) + osm_id2index_file, "rb") as file:
+with open("../../data/Hai_Kou/network_data/" + osm_id2index_file, "rb") as file:
 	osm_id2index = pickle.load(file)
 
 dates = pd.date_range("2017-05-01", "2017-10-31")

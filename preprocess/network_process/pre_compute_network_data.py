@@ -120,7 +120,7 @@ def compute_shortest_path_time_slot():
 
 if __name__ == '__main__':
     could_drive_distance = VEHICLE_SPEED * TIME_SLOT  # 车辆在一个时间间隔内可以行驶的距离
-    base_file = "../../data/{0}/network_data".format(GEO_NAME)
+    base_file = "../../data/{0}/network_data/".format(GEO_NAME)
     graph_file = GEO_DATA_FILE["graph_file"]
     osm_id2index_file = os.path.join(base_file, GEO_DATA_FILE["osm_id2index_file"])
     index2osm_id_file = os.path.join(base_file, GEO_DATA_FILE["index2osm_id_file"])
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     adjacent_location_goal_index_file = os.path.join(base_file, GEO_DATA_FILE["adjacent_location_goal_index_file"])
 
     # load raw data
-    graph = ox.load_graphml(filename=graph_file, folder=base_file)
+    graph = ox.load_graphml(filename=graph_file, folder="../raw_data/{0}_raw_data/".format(GEO_NAME))
 
     # osm_id2index = {}
     # index2osm_id = {}
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     node_number = len(osm_id2index)
 
     # 计算最短路径长度矩阵
-    # compute_shortest_distance()
+    compute_shortest_distance()
 
     # 得到下到一个节点的需要经过的节点
     # compute_shortest_path()

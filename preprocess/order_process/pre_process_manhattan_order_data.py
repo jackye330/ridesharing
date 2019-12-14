@@ -14,11 +14,12 @@ import pickle
 import osmnx as ox
 import pandas as pd
 import numpy as np
+import networkx as nx
+from sklearn.neighbors import BallTree
 from setting import SECOND_OF_DAY
-from setting import Manhattan, NewYork
-result_dir = "../../data/{0}/order_data".format(Manhattan)
-new_york_temp_dir = "../raw_data/temp/{0}/".format(NewYork)
-manhattan_temp_dir = "../raw_data/temp/{0}".format(Manhattan)
+result_dir = "../../data/Manhattan/order_data"
+new_york_temp_dir = "../raw_data/temp/New_York/"
+manhattan_temp_dir = "../raw_data/temp/Manhattan"
 green, yellow = "green", "yellow"
 chunk_size = 100000
 
@@ -32,6 +33,13 @@ def list2str(lis):
     return ",".join(list(map(str, lis)))
 
 
+def get_nearest_nodes(lon, lat):
+    points = np.array([lat.astype(np.float), lon.astype(np.float)]).T
+    points_rad = np.deg2rad(points)
+    nn = nodes.iloc[tree.query(points_rad, k=1, return_distance=False)[:, 0]].index  # query the tree for nearest node to each point
+    return np.array(nn)
+
+
 if not os.path.exists(new_york_temp_dir):
     os.mkdir(new_york_temp_dir)
 
@@ -40,11 +48,11 @@ if not os.path.exists(manhattan_temp_dir):
 
 # 纽约市剔除异常数据
 for color in [green, yellow]:
-    raw_order_filename = os.path.join("../raw_data/{0}_raw_data".format(NewYork), "{0}_trip_data_2016-06.csv".format(color))
+    raw_order_filename = os.path.join("../raw_data/New_York_raw_data", "{0}_trip_data_2016-06.csv".format(color))
     new_york_temp_result_file1 = os.path.join(new_york_temp_dir, "{0}_temp1.csv".format(color))
     cnt = 0
     temp_file = open(new_york_temp_result_file1, "w")
-    temp_file.write(",".join(["day", "pick_time", "drop_time", "pick_longitude", "pick_latitude", "drop_longitude", "drop_latitude", "passenger_count", "trip_distance", "fare_amount", "tip_amount", "total_amount"]) + "\n")
+    temp_file.write(",".join(["day", "pick_time", "drop_time", "pick_longitude", "pick_latitude", "drop_longitude", "drop_latitude", "n_riders", "order_distance", "fare_amount", "tip_amount", "total_amount"]) + "\n")
     for csv_iterator in pd.read_table(raw_order_filename, chunksize=chunk_size, iterator=True):
         for line in csv_iterator.values:
             s = line[0].split(',')
@@ -75,24 +83,23 @@ for color in [green, yellow]:
     temp_file.close()
 
 # 纽约市点对齐
-NewYork_G = ox.load_graphml(NewYork + ".graph" + "ml", "../../data/{0}/network_data".format(NewYork))  # 注意：".graph"+"ml" 是不为了飘绿色
+NewYork_G = ox.load_graphml("New_York.graph" + "ml", "../../data/New_York_raw_data/")  # 注意：".graph"+"ml" 是不为了飘绿色
+nodes = pd.DataFrame({'x': nx.get_node_attributes(NewYork_G, 'x'), 'y': nx.get_node_attributes(NewYork_G, 'y')})
+nodes_rad = np.deg2rad(nodes[['y', 'x']].astype(np.float))
+tree = BallTree(nodes_rad, metric='haversine')
+
 for color in [green, yellow]:
     new_york_temp_result_file1 = os.path.join(new_york_temp_dir, "{0}_temp1.csv".format(color))
     new_york_temp_result_file2 = os.path.join(new_york_temp_dir, "{0}_temp2.csv".format(color))
     temp_file = open(new_york_temp_result_file2, "w")
-    temp_file.write(",".join(["day", "pick_time", "drop_time", "pick_som_id", "drop_osm_id", "passenger_count", "trip_distance", "fare_amount", "tip_amount", "total_amount"]) + "\n")
+    temp_file.write(",".join(["day", "pick_time", "drop_time", "pick_som_id", "drop_osm_id", "n_riders", "order_distance", "tip_amount", "total_amount"]) + "\n")
     cnt = 0
     for csv_iterator in pd.read_table(new_york_temp_result_file1, chunksize=chunk_size, iterator=True):
-        data = []
-        for line in csv_iterator.values:
-            data.append(list(map(float, line[0].split(","))))
-        data = np.array(data)
-        pick_lon = data[:, 3]
-        pick_lat = data[:, 4]
-        drop_lon = data[:, 5]
-        drop_lat = data[:, 6]
-        correct_pick_osm_ids = ox.get_nearest_nodes(NewYork_G, pick_lon, pick_lat, method="balltree")
-        correct_drop_osm_ids = ox.get_nearest_nodes(NewYork_G, drop_lon, drop_lat, method="balltree")
+        data = np.array([list(map(float, line[0].split(","))) for line in csv_iterator.values])
+        pick_lon, pick_lat = data[:, 3], data[:, 4]
+        drop_lon, drop_lat = data[:, 5], data[:, 6]
+        correct_pick_osm_ids = get_nearest_nodes(pick_lon, pick_lat)
+        correct_drop_osm_ids = get_nearest_nodes(drop_lon, drop_lat)
         for idx in range(data.shape[0]):
             temp_list = data[idx, :3].tolist() + [correct_pick_osm_ids[idx], correct_drop_osm_ids[idx]] + data[idx, 7:].tolist()
             temp_file.write(list2str(temp_list) + "\n")
@@ -103,12 +110,12 @@ for color in [green, yellow]:
     temp_file.close()
 
 # 提取只在曼哈顿的数据合并黄绿出租车的订单数据
-Manhattan_G = ox.load_graphml(Manhattan + ".graph" + "ml", "../../data/{0}/network_data".format(Manhattan))
+Manhattan_G = ox.load_graphml("Manhattan.graph" + "ml", "../raw_data/Manhattan_raw_data/")
 ok_nodes = set(Manhattan_G.nodes)
-with open(os.path.join("../../data/{0}/network_data/".format(Manhattan), "osm_id2index.pkl"), "rb") as file:
+with open(os.path.join("../../data/Manhattan/network_data/", "osm_id2index.pkl"), "rb") as file:
     osm_id2index = pickle.load(file)
 manhattan_temp_result_file1 = open(os.path.join(manhattan_temp_dir, "manhattan_order_temp.csv"), "w")
-manhattan_temp_result_file1.write(",".join(["day", "pick_time", "drop_time", "pick_osm_id", "drop_osm_id", "passenger_count", "trip_distance", "fare_amount", "tip_amount", "total_amount"]) + "\n")
+manhattan_temp_result_file1.write(",".join(["day", "pick_time", "drop_time", "pick_osm_id", "drop_osm_id", "n_riders", "order_distance", "order_fare", "order_tip", "total_fare"]) + "\n")
 for color in [green, yellow]:
     temp_color_result_file = os.path.join(new_york_temp_dir, "{0}_temp2.csv".format(color))
     for csv_iterator in pd.read_table(temp_color_result_file, chunksize=chunk_size, iterator=True):

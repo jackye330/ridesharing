@@ -11,7 +11,7 @@ with open("../../data/Manhattan/network_data/osm_id2index.pkl", "rb") as f:
     osm_id2index = pickle.load(f)
 with open("../../data/Manhattan/network_data/index2osm_id.pkl", "rb") as f:
     index2osm_id = pickle.load(f)
-G = ox.load_graphml("Manhattan.graphml", "../../data/Manhattan/network_data")
+G = ox.load_graphml("Manhattan.graphml", "../raw_data/Manhattan_raw_data")
 
 nodes = G.nodes(data=True)
 index2point = {osm_id2index[node[0]]: (node[1]["x"], node[1]['y']) for node in nodes}

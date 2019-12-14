@@ -80,6 +80,7 @@ class Order:
         """
         将原始数据生成一个csv文件
         :param output_file: csv输出文件
+        :param network: 网络
         :return:
         """
         cls.order_generator(output_file, network)
@@ -97,7 +98,6 @@ class Order:
         order_id = 0
         current_time = start_time
         each_time_slot_orders: Set[Order] = set()
-        order_data = pd.read_csv("")
         for csv_iterator in pd.read_table(input_file, chunksize=chunk_size, iterator=True):  # 这么弄主要是为了防止order_data过大
             for line in csv_iterator.values:
                 # "request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"
@@ -232,18 +232,18 @@ def generate_real_road_orders_data(output_file, *args, **kwargs):
     """
     # 这个是由真实的订单数据的生成需要的结果
     from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
-    from setting import MIN_REQUEST_DAY, MAX_REQUEST_DAY
-    order_data_files = ["../preprocess/raw_data/temp/Manhattan/order_data_{0:03d}.csv".format(day) for day in range(MIN_REQUEST_DAY, MAX_REQUEST_DAY)]
     shortest_distance = np.load("../data/Manhattan/network_data/shortest_distance.npy")
-    order_data = pd.read_csv(order_data_files[0])
+    order_data = pd.read_csv("../preprocess/raw_data/temp/Manhattan/order_data_{0:03d}.csv".format(0))
     order_data = order_data[(MIN_REQUEST_TIME <= order_data.pick_time) & (order_data.pick_time < MAX_REQUEST_TIME)]
     order_data = order_data[shortest_distance[order_data.pick_index, order_data.drop_index] != np.inf]
     order_data = order_data[shortest_distance[order_data.pick_index, order_data.drop_index] >= 1000.0]  # 过于短的或者订单的距离是无穷大
     order_data["wait_time"] = np.random.choice(WAIT_TIMES, size=order_data.shape[0])
     order_data["order_distance"] = shortest_distance[order_data.pick_index, order_data.drop_index]
     order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=order_data.shape[0])
-    order_data["n_riders"] = np.where(order_data.passenger_count < 2, 1, 2)  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
-    order_data.drop(columns=["order_tip", "total_fare", "passenger_count"], axis=1, inplace=True)
+    order_data["n_riders"] = np.where(order_data.n_riders < 2, 1, 2)  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
+    order_data.drop(columns=["order_tip", "total_fare"], axis=1, inplace=True)
+    order_data = order_data.rename(columns={'pick_time': 'request_time'})
+    order_data["request_time"] = order_data["request_time"].values.astype(np.int32)
     order_data = order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"]]
     order_data.to_csv(output_file, index=False)
 
@@ -252,6 +252,7 @@ def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
     # 这个是将30天的数据合并之后的结果
     from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
     from setting import ORDER_DATA_FILES
+    from setting import MILE_TO_M
     import pickle
     with open(ORDER_DATA_FILES["pick_region_model"], "rb") as file:
         pick_region_model: RegionModel = pickle.load(file)
@@ -289,7 +290,7 @@ def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
                 temp_order_data["pick_index"] = np.array([pick_region_model.get_rand_index_by_region_id(i) for _ in range(d_n_of_t)], dtype=np.int16)
                 temp_order_data["drop_index"] = np.array([drop_region_model.get_rand_index_by_region_id(j) for _ in range(d_n_of_t)], dtype=np.int16)
                 temp_order_data["order_distance"] = shortest_distance[temp_order_data.pick_index.values, temp_order_data.drop_index.values]
-                temp_order_data["order_fare"] = temp_order_data["order_distance"] * unit_fare_model[time_bin]
+                temp_order_data["order_fare"] = temp_order_data["order_distance"] * unit_fare_model[time_bin] / MILE_TO_M
                 temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=d_n_of_t)
                 temp_order_data["n_riders"] = np.ones(shape=d_n_of_t, dtype=np.int8)
                 temp_order_data = temp_order_data[(temp_order_data["order_distance"] != np.inf) & (temp_order_data["order_distance"] >= 1000.0)]
@@ -337,4 +338,3 @@ def generate_grid_orders_data(output_file, network: Network):
         order_series.append(temp_order_data)
     order_data = pd.concat(order_series, axis=0, ignore_index=True)
     order_data.to_csv(output_file, index=False)
-

@@ -22,45 +22,43 @@ ROAD_MODE = "ROAD_MODE"
 GRID_MODE = "GRID_MODE"
 EXPERIMENTAL_MODE = ROAD_MODE
 # 一组参数实验的重复次数
-MAX_REPEATS = 10
+MAX_REPEATS = 1
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
-TIME_SLOT = 20
+TIME_SLOT = 60
 # 距离精度误差, 表示一个车辆到某一个点的距离小于这一个数, 那么就默认这个车已经到这个点上了 单位 m. 如果是实际的路网一般取10.0m, 如果是网格环境一般取0.0.
 DISTANCE_EPS = 10.0
-# 模拟天数的最小值/最大值，如果是网格环境默认为0, 如果是网格环境默认为1.
-MIN_REQUEST_DAY, MAX_REQUEST_DAY = 0, 1
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
 MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
 # 实验环境中的车辆数目
-VEHICLE_NUMBER = 500
+VEHICLE_NUMBER = 800
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 MILE_TO_KM * 12 / 3.6 m/s
 VEHICLE_SPEED = MILE_TO_KM * 12 / 3.6
 # 投标策略 "ADDITIONAL_COST" 以成本量的增加量作为投标 "ADDITIONAL_PROFIT" 以利润的增加量作为投标量
 ADDITIONAL_COST_STRATEGY = "ADDITIONAL_COST_STRATEGY"
 ADDITIONAL_PROFIT_STRATEGY = "ADDITIONAL_PROFIT_STRATEGY"
-BIDDING_STRATEGY = ADDITIONAL_PROFIT_STRATEGY
+BIDDING_STRATEGY = ADDITIONAL_COST_STRATEGY
 # 路线规划的目标 "MINIMIZE_COST" 最小化成本 "MAXIMIZE_PROFIT" 最大化利润
 MINIMIZE_COST = "MINIMIZE_COST"
 MAXIMIZE_PROFIT = "MAXIMIZE_PROFIT"
-ROUTE_PLANNING_GOAL = MAXIMIZE_PROFIT
+ROUTE_PLANNING_GOAL = MINIMIZE_COST
 # 路线规划的方案 "INSERTING" 新的订单起始点直接插入而不改变原有订单起始位置顺序  "RESCHEDULING" 原有订单的起始位置进行重排
 INSERTING = "INSERTING"
 RESCHEDULING = "RESCHEDULING"
-ROUTE_PLANNING_METHOD = RESCHEDULING
+ROUTE_PLANNING_METHOD = INSERTING
 # 平台使用的订单分发方式
 NEAREST_DISPATCHING = "NEAREST-DISPATCHING"  # 通用的最近车辆分配算法
 VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = SPARP_MECHANISM
+DISPATCHING_METHOD = GM_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
-NewYork = "NewYork"
-HaiKou = "HaiKou"
+New_York = "New_York"
+Hai_Kou = "Hai_Kou"
 Manhattan = "Manhattan"
 GEO_NAME = Manhattan
 GEO_DATA_FILE = {
@@ -113,6 +111,6 @@ N_SEATS = 4
 MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
 
 # 与环境创建相关的数据 #################################################################
-INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
-INPUT_ORDERS_DATA_FILES = ["../data/input/orders_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT) for i in range(MAX_REPEATS)]
-SAVE_RESULT_FILES = ["../result/{0}/dddd{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}_{4}_{5}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+INPUT_ORDERS_DATA_FILES = ["../data/input/orders_data/{0}_{1}_{2}_{3}_{4}_{5}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+SAVE_RESULT_FILES = ["../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]

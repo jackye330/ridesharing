@@ -13,8 +13,8 @@ if __name__ == '__main__':
     for epoch in range(MAX_REPEATS):
         simulator.create_env(INPUT_VEHICLES_DATA_FILES[epoch], INPUT_ORDERS_DATA_FILES[epoch])
 
-    # # 运行算法， 这个要在上面语句已经成功执行之后执行，这句执行要把上面的注释掉
-    # for epoch in range(MAX_REPEATS):
-    #     simulator.load_env(INPUT_VEHICLES_DATA_FILES[epoch], INPUT_ORDERS_DATA_FILES[epoch])
-    #     simulator.simulate()
-    #     simulator.save_simulate_result(SAVE_RESULT_FILES[epoch])
+    # 运行算法， 这个要在上面语句已经成功执行之后执行，这句执行要把上面的注释掉
+    for epoch in range(MAX_REPEATS):
+        simulator.load_env(INPUT_VEHICLES_DATA_FILES[epoch], INPUT_ORDERS_DATA_FILES[epoch])
+        simulator.simulate()
+        simulator.save_simulate_result(SAVE_RESULT_FILES[epoch])

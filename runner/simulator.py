@@ -17,7 +17,7 @@ from env.graph import BaseGraph, generate_grid_graph, generate_road_graph
 from env.order import Order, generate_road_orders_data, generate_grid_orders_data
 from env.network import Network
 from setting import BIDDING_STRATEGY, DISPATCHING_METHOD, EXPERIMENTAL_MODE, ROUTE_PLANNING_GOAL
-from setting import TIME_SLOT, VEHICLE_NUMBER, MIN_REQUEST_TIME, MIN_REQUEST_DAY, SECOND_OF_DAY, INT_ZERO
+from setting import TIME_SLOT, VEHICLE_NUMBER, MIN_REQUEST_TIME, INT_ZERO
 
 
 class Simulator:
@@ -67,7 +67,7 @@ class Simulator:
         self.orders = None  # 实则是一个生成器
         self.network: Network = network
         self.vehicle_update_location_time_slot: int = TIME_SLOT
-        self.current_time = MIN_REQUEST_DAY * SECOND_OF_DAY + MIN_REQUEST_TIME
+        self.current_time = MIN_REQUEST_TIME
         self.social_welfare_trend = list()
         self.social_cost_trend = list()
         self.total_driver_rewards_trend = list()
