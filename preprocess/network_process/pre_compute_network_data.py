@@ -29,7 +29,7 @@ def compute_shortest_distance():
         index_i = osm_id2index[lengths[0]]
         for osm_id_j, distance in lengths[1].items():
             index_j = osm_id2index[osm_id_j]
-            shortest_distance[index_i, index_j] = distance
+            shortest_distance[index_i, index_j] = np.round(distance)
         print(index_i)
     np.save(shortest_distance_file, shortest_distance)
 
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     compute_shortest_distance()
 
     # 得到下到一个节点的需要经过的节点
-    # compute_shortest_path()
+    compute_shortest_path()
 
     # 计算到一个节点过程中一分钟可以到哪些节点
     # compute_shortest_path_time_slot()

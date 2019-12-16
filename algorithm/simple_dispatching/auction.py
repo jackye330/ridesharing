@@ -74,17 +74,15 @@ class VCGMechanism(Mechanism):
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
         self.reset()  # 清空结果
-
         # 构建图
         t1 = time.clock()
         main_graph = self._build_graph(vehicles, orders, current_time, network, MaximumWeightMatchingGraph)
         self._bidding_time = (time.clock() - t1)  # 统计投标时间
-
         # 订单分配与司机定价
         for sub_graph in main_graph.get_sub_graphs():
             sub_social_welfare, sub_match_pairs = sub_graph.maximal_weight_matching(return_match=True)  # 胜者决定
             self.driver_pricing(sub_graph, sub_match_pairs, sub_social_welfare)  # 司机定价并统计结果
-            self._running_time = (time.clock() - t1 - self._bidding_time)
+        self._running_time = (time.clock() - t1 - self._bidding_time)
 
 
 class GreedyMechanism(Mechanism):

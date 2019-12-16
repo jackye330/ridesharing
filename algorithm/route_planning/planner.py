@@ -114,6 +114,7 @@ class InsertingPlanner(RoutePlanner):
                             result[k2] = k1
                         pick_up_dists_dict[b_o] = arr
                         _recursion(o_loc, n_k1, n_k2, seats - b_o.n_riders, arr, result)
+                        pick_up_dists_dict.pop(b_o)
                     else:
                         dll = (pick_up_dists_dict[b_o] if b_o in pick_up_dists_dict else b_o.pick_up_distance) + b_o.detour_distance + b_o.order_distance
                         if not network.is_smaller_bound_distance(arr, dll):

@@ -5,7 +5,7 @@
 from agent.vehicle import Vehicle
 
 
-class FixedVehicle():
+class FixedVehicle:
     """
     有固定路线的车辆
     """

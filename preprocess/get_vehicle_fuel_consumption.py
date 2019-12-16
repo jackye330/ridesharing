@@ -36,12 +36,12 @@ for i in range(1, page_num + 1):
         dict_result = json.loads(json_result)
         car_list = dict_result["resultMap"]
         for car_info in car_list:
-            clxh = car_info.get('clxh', "NULL")  # 车辆型号  i.e. ELECTRIC UP EABAFA1001 唯一的id
-            scqy = car_info.get('scqy', "NULL")  # 生产企业  i.e. 大众汽车股份公司
-            qdxs = car_info.get('qdxs', "NULL")  # 驱动型式 i.e.前轮驱动
+            clxh = car_info.get('clxh', "NULL")  # 车辆型号  e.g. ELECTRIC UP EABAFA1001 唯一的id
+            scqy = car_info.get('scqy', "NULL")  # 生产企业  e.g. 大众汽车股份公司
+            qdxs = car_info.get('qdxs', "NULL")  # 驱动型式 e.g. 前轮驱动
             edgl = car_info.get('edgl', "NULL")  # 额定功率  单位 kw
-            bsqlx = car_info.get('bsqlx', "NULL")  # 变速器类型  i.e. AT
-            fdjxh = car_info.get('fdjxh', "NULL")  # 发动机型号 i.e. EAB
+            bsqlx = car_info.get('bsqlx', "NULL")  # 变速器类型  e.g. AT
+            fdjxh = car_info.get('fdjxh', "NULL")  # 发动机型号 e.g. EAB
             zczbzl = car_info.get('zczbzl', "NULL")  # 车辆净重量 单位 kg
             zdsjzzl = car_info.get('zdsjzzl', "NULL")  # 车辆最大重量 单位 kg
             sjgk = car_info.get('sjgk', "NULL")  # 市郊油耗  单位 L/100km

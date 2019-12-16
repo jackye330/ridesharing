@@ -9,6 +9,7 @@ import pandas as pd
 
 from env.location import PickLocation, DropLocation
 from env.network import Network
+from setting import POINT_LENGTH
 from preprocess.utility import RegionModel
 from setting import FLOAT_ZERO, DETOUR_RATIOS, WAIT_TIMES, INT_ZERO
 
@@ -100,14 +101,14 @@ class Order:
         each_time_slot_orders: Set[Order] = set()
         for csv_iterator in pd.read_table(input_file, chunksize=chunk_size, iterator=True):  # 这么弄主要是为了防止order_data过大
             for line in csv_iterator.values:
-                # "request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"
+                # ["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]
                 each_order_data = line[0].split(',')
                 request_time = int(each_order_data[0])
                 wait_time = int(each_order_data[1])
                 pick_index = int(each_order_data[2])
                 drop_index = int(each_order_data[3])
-                order_fare = float(each_order_data[4])
-                order_distance = float(each_order_data[5])
+                order_distance = float(each_order_data[4])
+                order_fare = float(each_order_data[5])
                 detour_ratio = float(each_order_data[6])
                 n_riders = int(each_order_data[7])
                 order = cls(
@@ -116,8 +117,8 @@ class Order:
                     drop_location=DropLocation(drop_index),
                     request_time=request_time,
                     wait_time=wait_time,
-                    order_fare=order_fare,
                     order_distance=order_distance,
+                    order_fare=order_fare,
                     detour_ratio=detour_ratio,
                     n_riders=n_riders,
                 )
@@ -244,13 +245,13 @@ def generate_real_road_orders_data(output_file, *args, **kwargs):
     order_data.drop(columns=["order_tip", "total_fare"], axis=1, inplace=True)
     order_data = order_data.rename(columns={'pick_time': 'request_time'})
     order_data["request_time"] = order_data["request_time"].values.astype(np.int32)
-    order_data = order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"]]
+    order_data = order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
     order_data.to_csv(output_file, index=False)
 
 
 def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
     # 这个是将30天的数据合并之后的结果
-    from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
+    from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME, ORDER_NUMBER_RATIO
     from setting import ORDER_DATA_FILES
     from setting import MILE_TO_M
     import pickle
@@ -269,13 +270,14 @@ def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
     data_series = []
     for time_bin in range(st_time_bin, en_time_bin + 1):
         if st_time_bin == en_time_bin:  # 在同一个时间区间上
-            demand_number = demand_model[st_time_bin] * (MAX_REQUEST_TIME - MIN_REQUEST_TIME) / 3600
+            demand_number = demand_model[time_bin] * (MAX_REQUEST_TIME - MIN_REQUEST_TIME) / 3600
         elif time_bin == st_time_bin:
             demand_number = demand_model[time_bin] * ((st_time_bin + 1) * 3600 - MIN_REQUEST_TIME) / 3600
         elif time_bin == en_time_bin:
             demand_number = demand_model[time_bin] * (MAX_REQUEST_TIME - en_time_bin * 3600) / 3600
         else:
             demand_number = demand_model[time_bin]
+        demand_number = demand_number * ORDER_NUMBER_RATIO
         demand_prob_location = demand_location_model[time_bin]
         demand_prob_transfer = demand_transfer_model[time_bin]
         demand_number_of_each_transfer = np.zeros(shape=demand_prob_transfer.shape, dtype=np.int32)
@@ -290,11 +292,11 @@ def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
                 temp_order_data["pick_index"] = np.array([pick_region_model.get_rand_index_by_region_id(i) for _ in range(d_n_of_t)], dtype=np.int16)
                 temp_order_data["drop_index"] = np.array([drop_region_model.get_rand_index_by_region_id(j) for _ in range(d_n_of_t)], dtype=np.int16)
                 temp_order_data["order_distance"] = shortest_distance[temp_order_data.pick_index.values, temp_order_data.drop_index.values]
-                temp_order_data["order_fare"] = temp_order_data["order_distance"] * unit_fare_model[time_bin] / MILE_TO_M
+                temp_order_data["order_fare"] = np.round(temp_order_data["order_distance"] * unit_fare_model[time_bin] / MILE_TO_M, POINT_LENGTH)
                 temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=d_n_of_t)
                 temp_order_data["n_riders"] = np.ones(shape=d_n_of_t, dtype=np.int8)
                 temp_order_data = temp_order_data[(temp_order_data["order_distance"] != np.inf) & (temp_order_data["order_distance"] >= 1000.0)]
-                temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"]]
+                temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
                 data_series.append(temp_order_data)
     order_data: pd.DataFrame = pd.concat(data_series, axis=0, ignore_index=True)
     order_data = order_data.sort_values(by="request_time", axis=0, ascending=True)
@@ -334,7 +336,7 @@ def generate_grid_orders_data(output_file, network: Network):
         temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=(order_number,))
         temp_order_data["n_riders"] = np.random.randint(MIN_N_RIDERS, MAX_N_RIDERS + 1, size=(order_number,))
         temp_order_data = temp_order_data[temp_order_data.pick_index != temp_order_data.drop_index]
-        temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_fare", "order_distance", "detour_ratio", "n_riders"]]
+        temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
         order_series.append(temp_order_data)
     order_data = pd.concat(order_series, axis=0, ignore_index=True)
     order_data.to_csv(output_file, index=False)

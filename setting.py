@@ -22,7 +22,7 @@ ROAD_MODE = "ROAD_MODE"
 GRID_MODE = "GRID_MODE"
 EXPERIMENTAL_MODE = ROAD_MODE
 # 一组参数实验的重复次数
-MAX_REPEATS = 1
+MAX_REPEATS = 10
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
 TIME_SLOT = 60
 # 距离精度误差, 表示一个车辆到某一个点的距离小于这一个数, 那么就默认这个车已经到这个点上了 单位 m. 如果是实际的路网一般取10.0m, 如果是网格环境一般取0.0.
@@ -83,6 +83,8 @@ ORDER_DATA_FILES = {
     "demand_transfer_model_file": "../data/{0}/order_data/demand_transfer_model.npy".format(GEO_NAME),
     "unit_fare_model_file": "../data/{0}/order_data/unit_fare_model.npy".format(GEO_NAME),
 }
+# 订单缩放比
+ORDER_NUMBER_RATIO = 0.5  # 就是实际生产出来的订单数目乘于一个比例
 # 车辆油耗与座位数据存放地址
 FUEL_CONSUMPTION_DATA_FILE = "../data/vehicle_data/fuel_consumption_and_seats.csv"
 # 直接与此常数相乘可以得到单位距离的成本 $/m/(单位油耗)

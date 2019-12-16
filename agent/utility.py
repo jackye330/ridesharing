@@ -3,6 +3,8 @@
 # author : zlq16
 # date   : 2019/11/13
 from typing import List
+import numpy as np
+from setting import POINT_LENGTH
 from env.location import OrderLocation, VehicleLocation
 
 
@@ -92,8 +94,10 @@ class VehicleType:
 
     @classmethod
     def set_vehicle_speed(cls, vehicle_speed: float):
+        vehicle_speed = np.round(vehicle_speed, POINT_LENGTH)
         cls.vehicle_speed = vehicle_speed
 
     @classmethod
     def set_could_drive_distance(cls, could_drive_distance: float):
+        could_drive_distance = np.round(could_drive_distance, POINT_LENGTH)
         cls.could_drive_distance = could_drive_distance

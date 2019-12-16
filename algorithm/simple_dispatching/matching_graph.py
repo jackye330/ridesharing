@@ -153,7 +153,7 @@ class MarketClearingMatchingGraph(BipartiteGraph):
         super(MarketClearingMatchingGraph, self).__init__(feasible_vehicles, feasible_orders)
         self.epsilon = 1 / np.power(10, POINT_LENGTH)  # TODO 这递增值需要修改, 这个对于算法性能有很大的影响，这里暂时不使用这个算法
 
-    def _is_prefect_matching(self, orders_matches: List[array]):
+    def _is_prefect_matching(self, orders_matches: List):
         m_v = np.ones(shape=(self.vehicle_number,), dtype=np.int16) * -1
         m_o = np.ones(shape=(self.order_number,), dtype=np.int16) * -1
         v_v = np.zeros(shape=(self.vehicle_number,), dtype=np.bool)
@@ -194,14 +194,13 @@ class MarketClearingMatchingGraph(BipartiteGraph):
             return False, None
 
     def _get_match_result(self, payoff: np.ndarray):
-        vehicle_bid_cnt = defaultdict(int)  # 表示车辆被投标的次数
-        orders_matches = [array('h') for _ in range(len(self.index2order))]
+        vehicle_bid_cnt = np.zeros(shape=self.vehicle_number, dtype=np.int32)
+        orders_matches = [np.array([]) for _ in range(len(self.index2order))]
         for order_index in range(self.order_number):
             order_array = payoff[order_index, :]
             vehicle_indexes = np.argwhere(np.abs(order_array - np.amax(order_array)) <= VALUE_EPS).flatten()
-            for vehicle_index in vehicle_indexes:
-                orders_matches[order_index].append(vehicle_index)
-                vehicle_bid_cnt[vehicle_index] += 1
+            orders_matches[order_index] = vehicle_indexes
+            vehicle_bid_cnt[vehicle_indexes] += 1
         return vehicle_bid_cnt, orders_matches
 
     def maximal_weight_matching(self, return_match=False) -> Tuple[float, List[Tuple[Vehicle, Order]]]:
@@ -224,6 +223,4 @@ class MarketClearingMatchingGraph(BipartiteGraph):
                             match_pairs.append((vehicle, order))
                 return social_welfare, match_pairs
             else:
-                for vehicle_index, cnt in vehicle_bid_cnt.items():
-                    if cnt > 1:  # 这个车不仅被一个订单反向投标
-                        prices[vehicle_index] += self.epsilon
+                prices[np.argwhere(vehicle_bid_cnt > 1).flatten()] += self.epsilon

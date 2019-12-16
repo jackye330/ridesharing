@@ -206,7 +206,7 @@ class RoadGraph(BaseGraph):
         else:
             # 直接选择点随机行走
             if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
-                target_index = np.random.choice(range(len(self._shortest_distance)))
+                target_index = np.random.choice(self._index_set)
                 vehicle_location.set_location(target_index)  # 凭空迁移
             else:
                 target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
