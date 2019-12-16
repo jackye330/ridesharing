@@ -245,6 +245,7 @@ def generate_real_road_orders_data(output_file, *args, **kwargs):
     order_data.drop(columns=["order_tip", "total_fare"], axis=1, inplace=True)
     order_data = order_data.rename(columns={'pick_time': 'request_time'})
     order_data["request_time"] = order_data["request_time"].values.astype(np.int32)
+    order_data["order_fare"] = np.round(order_data["order_fare"].values, POINT_LENGTH)
     order_data = order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
     order_data.to_csv(output_file, index=False)
 
@@ -332,7 +333,7 @@ def generate_grid_orders_data(output_file, network: Network):
         temp_order_data["pick_index"] = np.array([location.osm_index for location in pick_locations])
         temp_order_data["drop_index"] = np.array([location.osm_index for location in drop_locations])
         temp_order_data["order_distance"] = np.array([network.get_shortest_distance(pick_locations[idx], drop_locations[idx]) for idx in range(order_number)])
-        temp_order_data["order_fare"] = temp_order_data.order_distance * UNIT_FARE
+        temp_order_data["order_fare"] = np.round(temp_order_data.order_distance * UNIT_FARE, POINT_LENGTH)
         temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=(order_number,))
         temp_order_data["n_riders"] = np.random.randint(MIN_N_RIDERS, MAX_N_RIDERS + 1, size=(order_number,))
         temp_order_data = temp_order_data[temp_order_data.pick_index != temp_order_data.drop_index]

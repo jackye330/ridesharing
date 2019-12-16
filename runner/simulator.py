@@ -207,7 +207,6 @@ class Simulator:
                     vehicle.set_route(dispatching_result.driver_route)
                     vehicle.increase_earn_reward(dispatching_result.driver_reward)
                     vehicle.increase_earn_profit(dispatching_result.driver_payoff)
-
                 finish_orders = vehicle.drive_on_route(self.current_time, self.network)  # 下一个 time_slot 车的位置
                 for order in finish_orders:
                     self.each_orders_wait_time_trend.append(order.real_wait_time)

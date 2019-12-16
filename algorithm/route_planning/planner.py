@@ -3,7 +3,7 @@
 # author : zlq16
 # date   : 2019/11/7
 from typing import List, Dict
-
+import numpy as np
 from agent.utility import VehicleType
 from algorithm.route_planning.optimizer import Optimizer
 from algorithm.route_planning.utility import PlanningResult
@@ -107,7 +107,7 @@ class InsertingPlanner(RoutePlanner):
                     b_o: Order = o_loc.belong_order
                     arr = drive_dists + network.get_shortest_distance(pre_loc, o_loc)
                     if isinstance(o_loc, PickLocation):
-                        dll = (b_o.request_time + b_o.wait_time - current_time) * vehicle_type.vehicle_speed + vehicle_type.service_driven_distance
+                        dll = np.round((b_o.request_time + b_o.wait_time - current_time) * vehicle_type.vehicle_speed + vehicle_type.service_driven_distance)
                         if seats < b_o.n_riders or not network.is_smaller_bound_distance(arr, dll):
                             continue
                         if n_k2 != k2:
@@ -194,10 +194,7 @@ class ReschedulingPlanner(RoutePlanner):
                             _rem_list_copy.append(belong_o.drop_location)
                             pick_up_dists_dict[belong_o] = arr
                             _recursion(_cur_loc_list, _rem_list_copy, seats - belong_o.n_riders, arr)
-                            try:
-                                pick_up_dists_dict.pop(belong_o)
-                            except Exception as e:
-                                pass
+                            pick_up_dists_dict.pop(belong_o)
                     else:
                         real_detour_dist = arr - (pick_up_dists_dict[belong_o] if belong_o in pick_up_dists_dict else belong_o.pick_up_distance) - belong_o.order_distance
                         if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_o.detour_distance):

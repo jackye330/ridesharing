@@ -119,7 +119,7 @@ def compute_shortest_path_time_slot():
 
 
 if __name__ == '__main__':
-    could_drive_distance = VEHICLE_SPEED * TIME_SLOT  # 车辆在一个时间间隔内可以行驶的距离
+    could_drive_distance = np.round(VEHICLE_SPEED * TIME_SLOT)  # 车辆在一个时间间隔内可以行驶的距离
     base_file = "../../data/{0}/network_data/".format(GEO_NAME)
     graph_file = GEO_DATA_FILE["graph_file"]
     osm_id2index_file = os.path.join(base_file, GEO_DATA_FILE["osm_id2index_file"])

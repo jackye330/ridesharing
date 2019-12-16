@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 import numpy as np
 
 from setting import FLOAT_ZERO, DISTANCE_EPS
-from setting import INT_ZERO
+from setting import INT_ZERO, POINT_LENGTH
 from env.location import OrderLocation, VehicleLocation
 from utility import is_enough_small
 from utility import singleton
@@ -163,7 +163,7 @@ class RoadGraph(BaseGraph):
         distance_b = self._shortest_distance[vehicle_location.goal_index, order_location.osm_index]  # 意义看文档
         distance_c = self._shortest_distance[vehicle_location.osm_index, vehicle_location.goal_index]  # 意义看文档
         reverse_distance_c = self._shortest_distance[vehicle_location.goal_index, vehicle_location.osm_index]
-        if (distance_b != np.inf and is_enough_small(distance_c - vehicle_location.driven_distance + distance_b, distance_a + vehicle_location.driven_distance)) or reverse_distance_c == np.inf:
+        if reverse_distance_c == np.inf or (distance_b != np.inf and is_enough_small(distance_c - vehicle_location.driven_distance + distance_b, distance_a + vehicle_location.driven_distance)):
             # 用于判断车是否从goal_index到order_location 或者不可以反向行驶
             return True
         else:
@@ -231,7 +231,7 @@ class RoadGraph(BaseGraph):
             #     else:
             #         vehicle_location.set_location(osm_index)
 
-        return real_drive_distance
+        return np.round(real_drive_distance)
 
 
 @singleton
@@ -364,7 +364,7 @@ class GridGraph(BaseGraph):
             if target_index != vehicle_location.osm_index:
                 real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
 
-        return real_drive_distance
+        return np.round(real_drive_distance, POINT_LENGTH)
 
 
 def generate_road_graph() -> BaseGraph:

@@ -3,9 +3,9 @@
 # author : zlq16
 # date   : 2019/11/7
 from typing import List, Dict
-
+import numpy as np
 from agent.utility import VehicleType
-from setting import FLOAT_ZERO, INT_ZERO, POS_INF, NEG_INF
+from setting import FLOAT_ZERO, INT_ZERO, POS_INF, NEG_INF, POINT_LENGTH
 from env.location import OrderLocation, PickLocation, VehicleLocation
 from env.network import Network
 from env.order import Order
@@ -114,6 +114,7 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             vehicle_to_order_distance = network.get_shortest_distance(vehicle_type.location, route[i])
         else:
             vehicle_to_order_distance = network.get_shortest_distance(route[i-1], route[i])
+
         cur_dists += vehicle_to_order_distance
         belong_order: Order = route[i].belong_order
         if isinstance(route[i], PickLocation):
@@ -125,6 +126,7 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             if network.is_smaller_bound_distance(cur_dists, dll_dists):  # 计算到达时间是否超出于其的要求
                 pick_up_dists_dict[belong_order] = cur_dists  # 更新接乘客已经行驶的里程
             else:  # 无法满足最大等待时间
+                print(vehicle_type.location)
                 print("pick_up", cur_dists, dll_dists)
                 break
         else:
@@ -134,6 +136,7 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
             if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_order.detour_distance):
                 detour_ratios_dict[belong_order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / belong_order.order_distance
             else:  # 无法满足绕路比, 或者绕路比是有问题的路径规划
+                print(vehicle_type.location)
                 print("detour", real_detour_dist, belong_order.detour_distance)
                 break
     else:
@@ -143,8 +146,11 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
 
 
 def get_route_cost_by_route_info(route_info: RouteInfo, unit_cost: float) -> float:
+    """
+    结果会保留后两位
+    """
     if route_info.is_feasible:
-        cost = unit_cost * route_info.route_distance
+        cost = np.round(unit_cost * route_info.route_distance)
     else:
         cost = POS_INF
     return cost
@@ -161,10 +167,13 @@ def compute_discount_fare(order: Order, detour_ratio: float, discount=0.00025) -
 
 
 def get_route_profit_by_route_info(route_info: RouteInfo, unit_cost: float) -> float:
+    """
+    结果会保留后两位
+    """
     if route_info.is_feasible:
         fare = sum([compute_discount_fare(order, detour_ratio) for order, detour_ratio in route_info.order_detour_ratios.items()])
         cost = unit_cost * route_info.route_distance
-        profit = fare - cost
+        profit = np.round(fare - cost, POINT_LENGTH)
     else:
         profit = NEG_INF
     return profit
