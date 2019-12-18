@@ -30,7 +30,7 @@ DISTANCE_EPS = 10.0
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
-MIN_REQUEST_TIME, MAX_REQUEST_TIME = 8 * 60 * 60, 9 * 60 * 60
+MIN_REQUEST_TIME, MAX_REQUEST_TIME = 19 * 60 * 60, 20 * 60 * 60
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 800
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 (MILE_TO_KM * 25 / 3.6) m/s ≈ 10 m/s
@@ -113,6 +113,6 @@ N_SEATS = 4
 MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
 
 # 与环境创建相关的数据 #################################################################
-INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}_{4}_{5}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
-INPUT_ORDERS_DATA_FILES = ["../data/input/orders_data/{0}_{1}_{2}_{3}_{4}_{5}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}_{4}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
+INPUT_ORDERS_DATA_FILES = ["../data/input/orders_data/{0}_{1}_{2}_{3}.csv".format(EXPERIMENTAL_MODE, i, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]
 SAVE_RESULT_FILES = ["../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(DISPATCHING_METHOD, EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, TIME_SLOT, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]

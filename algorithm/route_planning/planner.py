@@ -18,9 +18,6 @@ from utility import is_enough_small
 __all__ = ["RoutePlanner", "InsertingPlanner", "ReschedulingPlanner"]
 
 
-UPPER_ROUTE_LENGTH = 8
-
-
 class RoutePlanner:
     __slots__ = ["_optimizer", "_corresponding_optimal_distance"]
 

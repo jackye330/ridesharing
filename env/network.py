@@ -104,8 +104,7 @@ class Network:
         else:
             pre_drive_distance = FLOAT_ZERO
 
-        could_drive_distance -= pre_drive_distance  # 减少预先行驶的距离
-
+        could_drive_distance -= pre_drive_distance
         if not vehicle_location.is_between and not is_enough_small(could_drive_distance, FLOAT_ZERO):
             # 如果车辆不在两点之间而就在一个点上 或者 车辆的可行使距离还有很多的情况下
             # 第一个订单节点的位置有两种可能性第一种订单节点在车辆处于两个节点中任何一个或者是在别的位置
@@ -117,7 +116,7 @@ class Network:
 
                     if covered_index == FIRST_INDEX:
                         vehicle_to_order_distance += pre_drive_distance
-                    yield True, covered_index, order_location, np.round(vehicle_to_order_distance, POINT_LENGTH)
+                    yield True, covered_index, order_location, np.round(vehicle_to_order_distance)
 
                     if is_enough_small(could_drive_distance, FLOAT_ZERO):  # 如果车辆多行驶了一点距离我们包容这种情况，就当车辆可以到对应的节点上
                         break

@@ -5,7 +5,7 @@
 from typing import List, Dict
 import numpy as np
 from agent.utility import VehicleType
-from setting import FLOAT_ZERO, INT_ZERO, POS_INF, NEG_INF, POINT_LENGTH
+from setting import FLOAT_ZERO, INT_ZERO, POS_INF, NEG_INF, POINT_LENGTH, DISTANCE_EPS
 from env.location import OrderLocation, PickLocation, VehicleLocation
 from env.network import Network
 from env.order import Order
@@ -123,21 +123,17 @@ def get_route_info(vehicle_type: VehicleType, route: List[OrderLocation], curren
                 break
             # 计算接送时间，判断是否可以接到订单
             dll_dists = (belong_order.request_time + belong_order.wait_time - current_time) * avg_speed + old_dists
-            if network.is_smaller_bound_distance(cur_dists, dll_dists):  # 计算到达时间是否超出于其的要求
+            if network.is_smaller_bound_distance(cur_dists, dll_dists + DISTANCE_EPS):  # 计算到达时间是否超出于其的要求
                 pick_up_dists_dict[belong_order] = cur_dists  # 更新接乘客已经行驶的里程
             else:  # 无法满足最大等待时间
-                print(vehicle_type.location)
-                print("pick_up", cur_dists, dll_dists)
                 break
         else:
             cur_seats += belong_order.n_riders
             # 计算绕路比，判断绕路比是否可以满足要求
             real_detour_dist = cur_dists - (pick_up_dists_dict[belong_order] if belong_order in pick_up_dists_dict else belong_order.pick_up_distance) - belong_order.order_distance  # 计算绕路比距离
-            if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist) and network.is_smaller_bound_distance(real_detour_dist, belong_order.detour_distance):
+            if network.is_smaller_bound_distance(FLOAT_ZERO, real_detour_dist + DISTANCE_EPS) and network.is_smaller_bound_distance(real_detour_dist, belong_order.detour_distance + DISTANCE_EPS):
                 detour_ratios_dict[belong_order] = (real_detour_dist if real_detour_dist >= FLOAT_ZERO else FLOAT_ZERO) / belong_order.order_distance
             else:  # 无法满足绕路比, 或者绕路比是有问题的路径规划
-                print(vehicle_type.location)
-                print("detour", real_detour_dist, belong_order.detour_distance)
                 break
     else:
         return RouteInfo(True, cur_dists - old_dists, detour_ratios_dict)

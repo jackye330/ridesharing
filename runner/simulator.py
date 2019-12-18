@@ -92,12 +92,16 @@ class Simulator:
         self.bidding_time_trend = list()
         self.running_time_trend = list()
 
-    def create_env(self, vehicles_data_save_file, orders_data_save_file):
+    def create_vehicle_env(self, vehicles_data_save_file):
         """
-        用于创造环境
-        :return:
+        用于创造车辆环境
         """
         Vehicle.generate_vehicles_data(VEHICLE_NUMBER, self.network, vehicles_data_save_file)
+
+    def create_order_env(self, orders_data_save_file):
+        """
+        用于创造订单环境
+        """
         Order.generate_orders_data(orders_data_save_file, self.network)
 
     def load_env(self, vehicles_data_file, orders_data_file):
@@ -159,6 +163,37 @@ class Simulator:
         ]
         with open(file_name, "wb") as file:
             pickle.dump(result, file)
+
+    def reset(self):
+        """
+        一个模拟之前的整理工作, 将上一步结果清空
+        """
+        self.platform.reset()
+        self.orders = None
+        self.vehicles = None
+        self.social_welfare_trend.clear()
+        self.social_cost_trend.clear()
+        self.total_driver_rewards_trend.clear()
+        self.total_driver_payoffs_trend.clear()
+        self.platform_profit_trend.clear()
+        self.total_orders_number_trend.clear()
+        self.serviced_orders_number_trend.clear()
+        self.accumulate_service_ratio_trend.clear()
+        self.empty_vehicle_number_trend.clear()
+        self.total_vehicle_number_trend.clear()
+        self.empty_vehicle_ratio_trend.clear()
+        self.accumulate_service_distance_trend.clear()
+        self.accumulate_random_distance_trend.clear()
+        self.each_orders_service_time_trend.clear()
+        self.each_orders_wait_time_trend.clear()
+        self.each_orders_detour_ratio_trend.clear()
+        self.each_vehicles_reward.clear()
+        self.each_vehicles_payoff.clear()
+        self.each_vehicles_finish_order_number.clear()
+        self.each_vehicles_service_distance.clear()
+        self.each_vehicles_random_distance.clear()
+        self.bidding_time_trend.clear()
+        self.running_time_trend.clear()
 
     def simulate(self):
         for current_time, new_orders in self.orders:  # orders 是一个生成器
@@ -239,6 +274,8 @@ class Simulator:
             self.each_vehicles_random_distance.append(vehicle.random_driven_distance)
             if vehicle.have_service_mission:
                 raise Exception("有这么长订单路线吗")
+        self.accumulate_service_distance_trend.append(sum([vehicle.service_driven_distance for vehicle in self.vehicles if vehicle.is_activated]))
+        self.accumulate_random_distance_trend.append(sum([vehicle.random_driven_distance for vehicle in self.vehicles if vehicle.is_activated]))
 
     def summary_each_round_result(self, new_orders: Set[Order]) -> NoReturn:
         """

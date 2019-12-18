@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 import numpy as np
 
 from setting import FLOAT_ZERO, DISTANCE_EPS
-from setting import INT_ZERO, POINT_LENGTH
+from setting import INT_ZERO
 from env.location import OrderLocation, VehicleLocation
 from utility import is_enough_small
 from utility import singleton
@@ -61,24 +61,23 @@ class BaseGraph:
             vehicle_location.set_location(target_index)
         else:
             real_drive_distance = FLOAT_ZERO
-            next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
             while not is_enough_small(could_drive_distance, DISTANCE_EPS):  # 需要行驶的距离已经过小了的情况
+                next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
                 vehicle_to_next_distance = self.get_shortest_distance_by_osm_index(vehicle_location.osm_index, next_index)  # 因为只是移动一个格子, 所以只是移动一个小格子
                 if is_enough_small(vehicle_to_next_distance - could_drive_distance, DISTANCE_EPS):
                     real_drive_distance += vehicle_to_next_distance
                     could_drive_distance -= vehicle_to_next_distance
+                    vehicle_location.set_location(next_index)
                     if is_enough_small(could_drive_distance, FLOAT_ZERO):
-                        vehicle_location.set_location(next_index)
                         break
                 else:
                     real_drive_distance += could_drive_distance
                     vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
                     break
-                vehicle_location.set_location(next_index)
-                next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
             else:  # 正常退出情况需要更新此时车辆的位置
                 if not is_random_drive:  # 不是随机行驶
                     real_drive_distance += could_drive_distance
+                    next_index = self.get_shortest_path_by_osm_index(vehicle_location.osm_index, target_index)
                     vehicle_location.set_location(vehicle_location.osm_index, could_drive_distance, next_index)
 
         return real_drive_distance
@@ -131,7 +130,6 @@ class RoadGraph(BaseGraph):
         随机生成一个osm_index
         :return:
         """
-        n, _ = self._shortest_distance.shape
         return np.random.choice(self._index_set)
 
     def get_shortest_distance_by_osm_index(self, osm_index1: int, osm_index2: int) -> float:
@@ -188,7 +186,7 @@ class RoadGraph(BaseGraph):
         real_drive_distance = FLOAT_ZERO  # 车辆实际行驶的距离
         if vehicle_location.is_between:  # 车辆处于两个节点之间
             # 首先车辆行驶两节点之间的距离
-            vehicle_to_goal_distance = self._shortest_distance[vehicle_location.osm_index, vehicle_location.goal_index] - vehicle_location.driven_distance
+            vehicle_to_goal_distance = self.get_shortest_distance_by_osm_index(vehicle_location.osm_index, vehicle_location.goal_index) - vehicle_location.driven_distance
 
             if is_enough_small(vehicle_to_goal_distance - could_drive_distance, DISTANCE_EPS):  # 可以到goal_index上
                 vehicle_location.set_location(vehicle_location.goal_index)  # 更新车辆位置
@@ -199,37 +197,14 @@ class RoadGraph(BaseGraph):
                 real_drive_distance += could_drive_distance  # 得到车辆当前行驶的距离
                 could_drive_distance = FLOAT_ZERO
 
-            # 如果车辆还有可行驶的距离探索可达节点
-            if not is_enough_small(could_drive_distance, DISTANCE_EPS) and len(self._access_osm_index[vehicle_location.osm_index]) != INT_ZERO:
-                target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
-                real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
-        else:
-            # 直接选择点随机行走
+        # 如果车辆还有可行驶的距离探索可达节点
+        if not is_enough_small(could_drive_distance, DISTANCE_EPS):
             if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
-                target_index = np.random.choice(self._index_set)
+                target_index = self._get_random_osm_index()
                 vehicle_location.set_location(target_index)  # 凭空迁移
             else:
                 target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
                 real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
-            # if len(self._adjacent_location_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 一分钟到不了任何节点，随机选择一个可以到达节点作为目标节点前进
-            #     if len(self._access_osm_index[vehicle_location.osm_index]) == INT_ZERO:  # 车当前的节点不可以到任何节点，那么就凭空移动，帮助其摆脱陷阱
-            #         target_index = np.random.choice(range(len(self._shortest_distance)))
-            #         vehicle_location.set_location(target_index)  # 凭空迁移
-            #     else:
-            #         target_index = np.random.choice(self._access_osm_index[vehicle_location.osm_index])
-            #         real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
-            # else:
-            #     idx = np.random.randint(0, len(self._adjacent_location_osm_index[vehicle_location.osm_index]))
-            #     osm_index = self._adjacent_location_osm_index[vehicle_location.osm_index][idx]
-            #     driven_distance = self._adjacent_location_driven_distance[vehicle_location.osm_index][idx]
-            #     goal_index = self._adjacent_location_goal_index[vehicle_location.osm_index][idx]
-            #     vehicle_to_goal_distance = self._shortest_distance[vehicle_location.osm_index, osm_index]
-            #     real_drive_distance += vehicle_to_goal_distance
-            #     if osm_index != goal_index:
-            #         vehicle_location.set_location(osm_index, driven_distance, goal_index)
-            #         real_drive_distance += driven_distance
-            #     else:
-            #         vehicle_location.set_location(osm_index)
 
         return np.round(real_drive_distance)
 
@@ -359,12 +334,12 @@ class GridGraph(BaseGraph):
                 real_drive_distance += could_drive_distance  # 得到车辆当前行驶的距离
                 could_drive_distance = FLOAT_ZERO
 
-        if not is_enough_small(could_drive_distance, FLOAT_ZERO):  # 还可以继续行驶
+        if not is_enough_small(could_drive_distance, DISTANCE_EPS):  # 还可以继续行驶
             target_index = self._get_random_osm_index()
             if target_index != vehicle_location.osm_index:
                 real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
 
-        return np.round(real_drive_distance, POINT_LENGTH)
+        return np.round(real_drive_distance)
 
 
 def generate_road_graph() -> BaseGraph:

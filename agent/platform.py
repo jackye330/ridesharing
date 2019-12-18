@@ -68,3 +68,10 @@ class Platform:
     @property
     def dispatching_mechanism(self) -> Mechanism:
         return self._dispatching_mechanism
+
+    def reset(self):
+        """
+        平台重置
+        """
+        self._order_pool.clear()  # 清空订单
+        self._dispatching_mechanism.reset()  # 机制自动清空

@@ -47,6 +47,8 @@ def compute_shortest_path():
     adjacent_index = [array.array('h') for _ in range(node_number)]  # 周围相邻的节点
     for paths in nx.all_pairs_dijkstra_path(graph, weight="length"):
         index_i = osm_id2index[paths[0]]
+        s_access_index = set()
+        s_adjacent_index = set()
         for osm_id_j, path in paths[1].items():
             index_j = osm_id2index[osm_id_j]
             if index_i == index_j:
@@ -56,9 +58,13 @@ def compute_shortest_path():
             else:
                 next_index = osm_id2index[path[1]]
                 shortest_path[index_i, index_j] = next_index
-                access_index[index_i].append(index_j)
-                adjacent_index[index_i].append(osm_id2index[path[1]])
+                s_access_index.add(index_j)
+                s_adjacent_index.add(next_index)
 
+        for j in s_access_index:
+            access_index[index_i].append(j)
+        for j in s_adjacent_index:
+            adjacent_index[index_i].append(j)
         print(index_i)
     np.save(shortest_path_file, shortest_path)
     with open(access_index_file, "wb") as file1:
