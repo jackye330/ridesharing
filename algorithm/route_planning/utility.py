@@ -10,6 +10,7 @@ from env.location import OrderLocation, PickLocation, VehicleLocation
 from env.network import Network
 from env.order import Order
 from setting import FIRST_INDEX
+from utility import fix_point_length_add, fix_point_length_sub
 
 
 class RouteInfo:
@@ -146,7 +147,7 @@ def get_route_cost_by_route_info(route_info: RouteInfo, unit_cost: float) -> flo
     结果会保留后两位
     """
     if route_info.is_feasible:
-        cost = np.round(unit_cost * route_info.route_distance)
+        cost = np.round(unit_cost * route_info.route_distance, POINT_LENGTH)
     else:
         cost = POS_INF
     return cost
@@ -169,7 +170,7 @@ def get_route_profit_by_route_info(route_info: RouteInfo, unit_cost: float) -> f
     if route_info.is_feasible:
         fare = sum([compute_discount_fare(order, detour_ratio) for order, detour_ratio in route_info.order_detour_ratios.items()])
         cost = unit_cost * route_info.route_distance
-        profit = np.round(fare - cost, POINT_LENGTH)
+        profit = fix_point_length_sub(fare, cost)
     else:
         profit = NEG_INF
     return profit

@@ -9,7 +9,7 @@ from agent.vehicle import Vehicle
 from algorithm.utility import Mechanism
 from env.network import Network
 from env.order import Order
-from utility import is_enough_small
+from utility import is_enough_small, fix_point_length_add, fix_point_length_sub
 
 
 class SecondPriceSequenceAuction(Mechanism):
@@ -30,7 +30,7 @@ class SecondPriceSequenceAuction(Mechanism):
         temp_vehicle_roue = {vehicle: vehicle.route for vehicle in vehicles}
 
         t1 = time.clock()
-        order_by_fare_orders = sorted(orders, key=lambda _order: _order.order_fare)  # 按照订单的估值进行排序
+        order_by_fare_orders = sorted(orders, key=lambda _order: _order.order_fare, reverse=True)  # 按照订单的估值进行排序
         for order in order_by_fare_orders:
 
             t2 = time.clock()
@@ -53,16 +53,16 @@ class SecondPriceSequenceAuction(Mechanism):
 
             additional_cost = winner_bid.additional_cost
             driver_reward = max_loser_bid.additional_cost  # 平台支付给司机的回报
-            driver_payoff = driver_reward - additional_cost
+            driver_payoff = fix_point_length_sub(driver_reward, additional_cost)
             self._dispatched_vehicles.add(winner_vehicle)
             self._dispatched_orders.add(order)
             self._dispatched_results[winner_vehicle].add_order(order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
-            self._social_welfare += (order.order_fare - additional_cost)
-            self._social_cost += additional_cost
-            self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_payoff
-            self._platform_profit += (order.order_fare - driver_reward)
+            self._social_welfare = fix_point_length_add(self._social_welfare, fix_point_length_sub(order.order_fare, additional_cost))
+            self._social_cost = fix_point_length_add(self._social_cost, additional_cost)
+            self._total_driver_rewards = fix_point_length_add(self._total_driver_rewards, driver_reward)
+            self._total_driver_payoffs = fix_point_length_add(self._total_driver_payoffs, driver_payoff)
+            self._platform_profit = fix_point_length_add(self._platform_profit, fix_point_length_sub(order.order_fare, driver_reward))
             temp_vehicle_roue[winner_vehicle] = winner_bid.bid_route  # 车辆信息暂时更新
 
         self._running_time += (time.clock() - t1 - self._bidding_time)

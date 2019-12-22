@@ -8,13 +8,25 @@ import array
 import networkx as nx
 import numpy as np
 import osmnx as ox
-
 from setting import GEO_NAME
 from setting import TIME_SLOT
 from setting import DISTANCE_EPS, VEHICLE_SPEED
 from setting import GEO_DATA_FILE
 from utility import print_execute_time
 from utility import is_enough_small
+
+
+@print_execute_time
+def create_multi_di_graph():
+    multi_graph = nx.MultiDiGraph()
+    multi_graph.add_nodes_from(graph.nodes(data=True))
+    for u, v, d in graph.edges(data=True):
+        if d["oneway"]:
+            multi_graph.add_edge(u, v, length=d["length"])
+        else:
+            multi_graph.add_edge(u, v, length=d["length"])
+            multi_graph.add_edge(v, u, length=d["length"])
+    return multi_graph
 
 
 @print_execute_time
@@ -25,7 +37,7 @@ def compute_shortest_distance():
     2. i不可以到达j, shortest_distance[i, j] = np.inf
     """
     shortest_distance = np.ones(shape=(node_number, node_number), dtype=np.float32) * np.inf
-    for lengths in nx.all_pairs_dijkstra_path_length(graph, weight="length"):
+    for lengths in nx.all_pairs_dijkstra_path_length(di_graph, weight="length"):
         index_i = osm_id2index[lengths[0]]
         for osm_id_j, distance in lengths[1].items():
             index_j = osm_id2index[osm_id_j]
@@ -45,7 +57,7 @@ def compute_shortest_path():
     shortest_path = np.ones(shape=(node_number, node_number), dtype=np.int16) * -2
     access_index = [array.array('h') for _ in range(node_number)]  # 可以到达的节点
     adjacent_index = [array.array('h') for _ in range(node_number)]  # 周围相邻的节点
-    for paths in nx.all_pairs_dijkstra_path(graph, weight="length"):
+    for paths in nx.all_pairs_dijkstra_path(di_graph, weight="length"):
         index_i = osm_id2index[paths[0]]
         s_access_index = set()
         s_adjacent_index = set()
@@ -87,7 +99,7 @@ def compute_shortest_path_time_slot():
     if not os.path.exists(base_file+"/{0}".format(TIME_SLOT)):
         os.mkdir(base_file+"/{0}".format(TIME_SLOT))
 
-    for paths in nx.all_pairs_dijkstra_path(graph, weight="length"):
+    for paths in nx.all_pairs_dijkstra_path(di_graph, weight="length"):
         index_i = osm_id2index[paths[0]]
         for osm_id_j, path in paths[1].items():
             index_j = osm_id2index[osm_id_j]
@@ -158,7 +170,7 @@ if __name__ == '__main__':
     with open(index2osm_id_file, "rb") as file:
         index2osm_id = pickle.load(file)
     node_number = len(osm_id2index)
-
+    di_graph = create_multi_di_graph()
     # 计算最短路径长度矩阵
     compute_shortest_distance()
 

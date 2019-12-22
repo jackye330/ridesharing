@@ -31,10 +31,13 @@ DISTANCE_EPS = 10.0
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
 MIN_REQUEST_TIME, MAX_REQUEST_TIME = 19 * 60 * 60, 20 * 60 * 60
+# 车辆空余位置的选择范围  TODO 这个以后可能会修改, 添加更多的选择
+N_SEATS = [4]
 # 实验环境中的车辆数目
 VEHICLE_NUMBER = 800
 # 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 (MILE_TO_KM * 25 / 3.6) m/s ≈ 10 m/s
-VEHICLE_SPEED = 10.0
+# 但是根据资料纽约市的车辆速度只有7.2mph ~ 9.1mph 约等于 4.0 m/s (http://mini.eastday.com/a/190331120732879.html)
+VEHICLE_SPEED = 4.0
 # 投标策略 "ADDITIONAL_COST" 以成本量的增加量作为投标 "ADDITIONAL_PROFIT" 以利润的增加量作为投标量
 ADDITIONAL_COST_STRATEGY = "ADDITIONAL_COST_STRATEGY"
 ADDITIONAL_PROFIT_STRATEGY = "ADDITIONAL_PROFIT_STRATEGY"
@@ -53,7 +56,7 @@ VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = GM_MECHANISM
+DISPATCHING_METHOD = VCG_MECHANISM
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
@@ -107,8 +110,6 @@ MIN_WAIT_TIME, MAX_WAIT_TIME = 10, 100
 UNIT_COSTS = [1.2, 1.3, 1.4, 1.5]
 # 订单的单位预先价格 每米乘客要花费的钱
 UNIT_FARE = 2.5
-# 车辆空余位置的选择范围
-N_SEATS = 4
 # 订单的乘客数目
 MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
 

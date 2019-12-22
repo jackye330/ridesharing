@@ -4,10 +4,12 @@
 # date   : 2019/3/6
 import pickle
 import time
+import numpy as np
 from functools import wraps
+from decimal import Decimal
 from inspect import signature
 
-from setting import VALUE_EPS
+from setting import VALUE_EPS, POINT_LENGTH
 
 
 def save_result(result_file):
@@ -108,4 +110,12 @@ def singleton(cls):
         return _instance[cls]
 
     return _func
+
+
+def fix_point_length_add(value1: float, value2: float):
+    return np.round(float(Decimal(str(value1)) + Decimal(str(value2))), POINT_LENGTH)
+
+
+def fix_point_length_sub(value1: float, value2: float):
+    return np.round(float(Decimal(str(value1)) - Decimal(str(value2))), POINT_LENGTH)
 

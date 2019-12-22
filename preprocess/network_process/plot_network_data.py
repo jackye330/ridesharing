@@ -16,8 +16,7 @@ for edge in graph.edges(data=True):
     edges_distance.append(np.round(edge[2]["length"]))
     if edge[2]["oneway"]:
         edges_distance.append(np.round(edge[2]["length"]))
-print(len(edges_distance))
-plt.hist(edges_distance, bins=30, histtype="stepfilled", alpha=0.6)
+plt.hist(edges_distance, bins=5, histtype="stepfilled", alpha=0.6)
 plt.show()
 
 # 绘制图像看最长的道路

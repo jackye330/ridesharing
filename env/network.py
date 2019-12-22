@@ -7,7 +7,7 @@
 """
 import numpy as np
 from typing import List, Union
-from setting import FIRST_INDEX, FLOAT_ZERO, DISTANCE_EPS, POINT_LENGTH
+from setting import FIRST_INDEX, FLOAT_ZERO, DISTANCE_EPS
 from env.graph import BaseGraph
 from env.location import OrderLocation, VehicleLocation, GeoLocation, PickLocation, DropLocation
 from utility import is_enough_small, singleton
@@ -62,7 +62,7 @@ class Network:
         else:
             vehicle_to_order_distance = distance_a
 
-        return np.round(vehicle_to_order_distance)  # 精确到 m
+        return round(vehicle_to_order_distance)  # 精确到 m
 
     def drive_on_random(self, vehicle_location: VehicleLocation, could_drive_distance: float) -> float:
         return self._graph.move_to_random_index(vehicle_location, could_drive_distance)
@@ -81,7 +81,7 @@ class Network:
         if vehicle_location.is_between:  # 当前车辆在两点之间
             if self.can_move_to_goal_index(vehicle_location, vehicle_route[FIRST_INDEX]):  # 当前车辆需要向location.goal_index行驶
                 vehicle_to_goal_distance = self._graph.get_shortest_distance_by_osm_index(vehicle_location.osm_index, vehicle_location.goal_index) - vehicle_location.driven_distance
-                vehicle_to_goal_distance = np.round(vehicle_to_goal_distance, POINT_LENGTH)
+                vehicle_to_goal_distance = round(vehicle_to_goal_distance)
                 # 判断是否可以到location.goal_index
                 # 1. vehicle 到 goal_index 的距离远远小于could_drive_distance
                 # 2. vehicle 到 goal_index 的距离只比could_drive_distance大DISTANCE_EPS
@@ -125,10 +125,10 @@ class Network:
                     vehicle_to_target_distance = self._graph.move_to_target_index(vehicle_location, target_index, could_drive_distance, is_random_drive=False)
                     if covered_index == FIRST_INDEX:  # 如果是第一个订单就是不可达的那么要考虑之前行驶的距离
                         vehicle_to_target_distance += pre_drive_distance
-                    yield False, covered_index - 1, order_location, np.round(vehicle_to_target_distance)
+                    yield False, covered_index - 1, order_location, round(vehicle_to_target_distance)
                     break
         else:  # 车辆一开始就把所有可以运行的距离都运行，车辆根本就不可能到任何一个订单节点
-            yield False, -1, None, np.round(pre_drive_distance)
+            yield False, -1, None, round(pre_drive_distance)
 
     @staticmethod
     def is_smaller_bound_distance(distance: float, bound_distance: float):
@@ -138,4 +138,4 @@ class Network:
         :param bound_distance:
         :return:
         """
-        return is_enough_small(np.round(distance), np.round(bound_distance + DISTANCE_EPS))
+        return is_enough_small(round(distance), round(bound_distance + DISTANCE_EPS))

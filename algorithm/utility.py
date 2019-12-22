@@ -10,6 +10,7 @@ from env.location import OrderLocation
 from env.network import Network
 from env.order import Order
 from setting import FLOAT_ZERO
+from utility import fix_point_length_add
 
 __all__ = ["Mechanism"]
 
@@ -41,8 +42,8 @@ class DispatchedResult:
 
     def add_order(self, order: Order, reward: float, payoff: float):
         self._orders.append(order)
-        self._driver_reward += reward
-        self._driver_payoff += payoff
+        self._driver_reward = fix_point_length_add(self._driver_reward, reward)
+        self._driver_payoff = fix_point_length_add(self._driver_payoff, payoff)
 
     def set_route(self, route: List[OrderLocation]):
         self._driver_route = route

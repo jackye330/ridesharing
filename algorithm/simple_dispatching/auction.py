@@ -8,11 +8,11 @@ from typing import List, Tuple, Set, NoReturn
 
 from agent.vehicle import Vehicle
 from algorithm.utility import Mechanism
-from algorithm.simple_dispatching.matching_graph import MaximumWeightMatchingGraph, BipartiteGraph, MarketClearingMatchingGraph
+from algorithm.simple_dispatching.matching_graph import MaximumWeightMatchingGraph, BipartiteGraph
 from algorithm.simple_dispatching.matching_pool import MatchingPairPool
 from env.network import Network
 from env.order import Order
-from utility import is_enough_small
+from utility import is_enough_small, fix_point_length_sub, fix_point_length_add
 
 __all__ = ["vcg_mechanism", "greedy_mechanism"]
 
@@ -45,7 +45,7 @@ class VCGMechanism(Mechanism):
         graph = graph_type(feasible_vehicles, feasible_orders)
         for vehicle, order_bids in bids.items():
             for order, order_bid in order_bids.items():
-                graph.add_edge(vehicle, order, order.order_fare - order_bid.additional_cost)
+                graph.add_edge(vehicle, order, fix_point_length_sub(order.order_fare, order_bid.additional_cost))
         graph.bids = bids
 
         return graph
@@ -58,19 +58,20 @@ class VCGMechanism(Mechanism):
             bipartite_graph.recovery_remove_vehicle()  # 恢复被删除的车辆
             winner_bid = bipartite_graph.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
             additional_cost = winner_bid.additional_cost
-            driver_reward = min(additional_cost + (social_welfare - social_welfare_without_winner), corresponding_order.order_fare)
-            driver_payoff = driver_reward - additional_cost
+            # driver_reward = min(fix_point_length_add(additional_cost, fix_point_length_sub(social_welfare, social_welfare_without_winner)), corresponding_order.order_fare)
+            driver_reward = fix_point_length_add(additional_cost, fix_point_length_sub(social_welfare, social_welfare_without_winner))
+            driver_payoff = fix_point_length_sub(driver_reward, additional_cost)
 
             # 保存结果
             self._dispatched_vehicles.add(winner_vehicle)
             self._dispatched_orders.add(corresponding_order)
             self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
-            self._social_cost += additional_cost
-            self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_payoff
-            self._platform_profit += (corresponding_order.order_fare - driver_reward)
-        self._social_welfare += social_welfare
+            self._social_cost = fix_point_length_add(self._social_cost, additional_cost)
+            self._total_driver_rewards = fix_point_length_add(self._total_driver_rewards, driver_reward)
+            self._total_driver_payoffs = fix_point_length_add(self._total_driver_payoffs, driver_payoff)
+            self._platform_profit = fix_point_length_add(self._platform_profit, fix_point_length_sub(corresponding_order.order_fare, driver_reward))
+        self._social_welfare = fix_point_length_add(self._social_welfare, social_welfare)
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
         self.reset()  # 清空结果
@@ -127,7 +128,6 @@ class GreedyMechanism(Mechanism):
             dispatched_orders_without_winner = set()
             dispatched_vehicles_without_winner.add(winner_vehicle)  # 首先就将改车辆排除
             winner_bid = pool.get_vehicle_order_pair_bid(winner_vehicle, corresponding_order)
-
             driver_reward = winner_bid.additional_cost
             for vehicle_order_pair in pool:  # 剔除已经胜利的车辆重新匹配
                 if len(dispatched_vehicles_without_winner) == pool.vehicle_number or len(dispatched_orders_without_winner) == pool.order_number:
@@ -135,22 +135,21 @@ class GreedyMechanism(Mechanism):
                 dispatched_vehicle, dispatched_order, pair_social_welfare = vehicle_order_pair
                 if dispatched_vehicle in dispatched_vehicles_without_winner or dispatched_order in dispatched_orders_without_winner:  # 剔除已经分配的订单
                     continue
-                driver_reward = max(driver_reward, corresponding_order.order_fare - pair_social_welfare)
+                driver_reward = max(driver_reward, fix_point_length_sub(corresponding_order.order_fare, pair_social_welfare))
                 dispatched_vehicles_without_winner.add(dispatched_vehicle)
                 dispatched_orders_without_winner.add(dispatched_order)
                 if corresponding_order == dispatched_order:  # 循环终止条件
                     break
             driver_reward = min(corresponding_order.order_fare, driver_reward)
-            driver_payoff = driver_reward - winner_bid.additional_cost
-
+            driver_payoff = fix_point_length_sub(driver_reward, winner_bid.additional_cost)
             # 保存结果
-            self._social_welfare += (corresponding_order.order_fare - winner_bid.additional_cost)
-            self._social_cost += winner_bid.additional_cost
+            self._social_welfare = fix_point_length_add(self._social_welfare, fix_point_length_sub(corresponding_order.order_fare, winner_bid.additional_cost))
+            self._social_cost = fix_point_length_add(self._social_cost, winner_bid.additional_cost)
             self._dispatched_results[winner_vehicle].add_order(corresponding_order, driver_reward, driver_payoff)
             self._dispatched_results[winner_vehicle].set_route(winner_bid.bid_route)
-            self._total_driver_rewards += driver_reward
-            self._total_driver_payoffs += driver_payoff
-            self._platform_profit += (corresponding_order.order_fare - driver_reward)
+            self._total_driver_rewards = fix_point_length_add(self._total_driver_rewards, driver_reward)
+            self._total_driver_payoffs = fix_point_length_add(self._total_driver_payoffs, driver_payoff)
+            self._platform_profit = fix_point_length_add(self._platform_profit, fix_point_length_sub(corresponding_order.order_fare, driver_reward))
 
     def run(self, vehicles: List[Vehicle], orders: Set[Order], current_time: int, network: Network) -> NoReturn:
         self.reset()  # 清空结果

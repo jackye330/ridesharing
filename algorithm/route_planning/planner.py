@@ -104,7 +104,7 @@ class InsertingPlanner(RoutePlanner):
                     b_o: Order = o_loc.belong_order
                     arr = drive_dists + network.get_shortest_distance(pre_loc, o_loc)
                     if isinstance(o_loc, PickLocation):
-                        dll = np.round((b_o.request_time + b_o.wait_time - current_time) * vehicle_type.vehicle_speed + vehicle_type.service_driven_distance)
+                        dll = (b_o.request_time + b_o.wait_time - current_time) * vehicle_type.vehicle_speed + vehicle_type.service_driven_distance
                         if seats < b_o.n_riders or not network.is_smaller_bound_distance(arr, dll):
                             continue
                         if n_k2 != k2:

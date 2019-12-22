@@ -9,6 +9,7 @@ from algorithm.route_planning.utility import get_route_info, get_route_cost_by_r
 from env.location import OrderLocation
 from env.network import Network
 from env.order import Order
+from utility import fix_point_length_sub
 
 __all__ = ["ProxyBidder", "AdditionalCostBidder", "AdditionalProfitBidder"]
 
@@ -60,7 +61,9 @@ class AdditionalCostBidder(ProxyBidder):
             else:
                 old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
                 old_cost = get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
-            bid = OrderBid(new_cost - old_cost, planning_result.route, new_cost - old_cost)
+
+            additional_cost = fix_point_length_sub(new_cost, old_cost)
+            bid = OrderBid(additional_cost, planning_result.route, additional_cost)
         else:
             bid = None
         return bid
@@ -100,7 +103,10 @@ class AdditionalProfitBidder(ProxyBidder):
                 old_route_info = get_route_info(vehicle_type, old_route, current_time, network)
                 old_profit = other_info["old_profit"] if "old_profit" in other_info else get_route_profit_by_route_info(old_route_info, vehicle_type.unit_cost)
                 old_cost = other_info["old_cost"] if "old_cost" in other_info else get_route_cost_by_route_info(old_route_info, vehicle_type.unit_cost)
-            bid = OrderBid(new_profit - old_profit, planning_result.route, new_cost - old_cost)
+
+            additional_profit = fix_point_length_sub(new_profit, old_profit)
+            additional_cost = fix_point_length_sub(new_cost, old_cost)
+            bid = OrderBid(additional_profit, planning_result.route, additional_cost)
         else:
             bid = None
         return bid
