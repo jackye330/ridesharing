@@ -14,6 +14,7 @@ from setting import FIRST_INDEX, FLOAT_ZERO, INT_ZERO, VEHICLE_FUEL_COST_RATIO
 from env.location import DropLocation, PickLocation, VehicleLocation, OrderLocation
 from env.network import Network
 from env.order import Order
+from utility import fix_point_length_add
 
 __all__ = ["Vehicle", "generate_grid_vehicles_data", "generate_road_vehicles_data"]
 
@@ -282,10 +283,10 @@ class Vehicle:
         self._vehicle_type.available_seats += n_riders
 
     def increase_earn_reward(self, reward: float):
-        self._earn_reward += reward
+        self._earn_reward = fix_point_length_add(self._earn_reward, reward)
 
     def increase_earn_profit(self, profit: float):
-        self._earn_payoff += profit
+        self._earn_payoff = fix_point_length_add(self._earn_payoff, profit)
 
     def increase_service_distance(self, additional_distance: float) -> NoReturn:
         self._vehicle_type.service_driven_distance += additional_distance

@@ -6,6 +6,7 @@ import pickle
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from analysis.utility import Result
 import pandas as pd
 from setting import GM_MECHANISM, VCG_MECHANISM
 from setting import EXPERIMENTAL_MODE
@@ -15,37 +16,92 @@ matplotlib.use('TkAgg')
 plt.rc('font', family='Times New Roman', weight=3)
 legend_font_size = 14
 label_font_size = 16
-n_sample = 3
+n_sample = 10
 index2metric = pd.read_csv("index2metric.csv")
 model_names = [VCG_MECHANISM, GM_MECHANISM]
-vehicle_numbers = 800
+min_v, max_v, v_step = 800, 1201, 200
 
-vcg_files = ["../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(VCG_MECHANISM, EXPERIMENTAL_MODE, i, 800, 60, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(n_sample)]
-gm_files = ["../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(GM_MECHANISM, EXPERIMENTAL_MODE, i, 800, 60, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(n_sample)]
 
-sw1_mean, sw1_std = 0, 0
-sw2_mean, sw2_std = 0, 0
-for i in range(1, 2):
-    vcg_file = vcg_files[i]
-    gm_file = gm_files[i]
-    with open(vcg_file, "rb") as file:
-        vcg_result = pickle.load(file)
-    with open(gm_file, "rb") as file:
-        gm_result = pickle.load(file)
-
-    print(sum(vcg_result[1]), sum(vcg_result[2]), sum(vcg_result[3]))
-    print(sum(gm_result[1]), sum(gm_result[2]), sum(gm_result[3]))
-    plt.plot(vcg_result[4])
-    plt.plot(gm_result[4])
-    print(len(gm_result[4]))
-    plt.legend(["vgc", "gm"])
+def plot_bar_char2(y1_mean, y2_mean, y1_std, y2_std, x_str, y_str, model_1, model_2):
+    plt.figure(figsize=(7, 6))
+    ind = np.arange(len(y1_mean)) * 2
+    label = range(min_v, max_v, v_step)
+    width = 0.8
+    plt.bar(ind - width / 2, y1_mean, width=width, yerr=y1_std)
+    plt.bar(ind + width / 2, y2_mean, width=width, yerr=y2_std)
+    plt.xticks(ind, label)
+    plt.legend([model_1, model_2], fontsize=legend_font_size)
+    plt.xlabel(x_str, fontsize=label_font_size)
+    plt.ylabel(y_str, fontsize=label_font_size)
     plt.show()
 
-    # plt.figure()
-    # plt.plot(vcg_result[15])
-    # plt.plot(gm_result[15])
-    # plt.legend(["vcg", "gm"])
-    # plt.show()
+
+def get_each_parameter_value(mechanism, vehicle_number, time_slot):
+    sw, dp, pp, sr, rt = [], [], [], [], []
+    for i in range(n_sample):
+        file_name = "../result/{0}/{1}_{2}_{3}_{4}_{5}_{6}.pkl".format(mechanism, EXPERIMENTAL_MODE, i, vehicle_number, time_slot, MIN_REQUEST_TIME, MAX_REQUEST_TIME)
+        with open(file_name, "rb") as file:
+            data = pickle.load(file)
+        r = Result(data)
+        sw.append(r.get_total_social_welfare())
+        dp.append(r.get_total_driver_payoffs())
+        pp.append(r.get_total_platform_profit())
+        sr.append(r.get_service_ratio())
+        rt.append(r.get_total_running_time())
+
+    return (
+        np.mean(sw), np.std(sw),
+        np.mean(dp), np.std(dp),
+        np.mean(pp), np.std(pp),
+        np.mean(sr), np.std(sr),
+        np.mean(rt), np.std(rt))
+
+
+# vcg 数据
+vcg_sw_mean, vcg_sw_std = [], []
+vcg_dp_mean, vcg_dp_std = [], []
+vcg_pp_mean, vcg_pp_std = [], []
+vcg_sr_mean, vcg_sr_std = [], []
+vcg_rt_mean, vcg_rt_std = [], []
+for v in range(min_v, max_v, v_step):
+    print(v)
+    summary_result = get_each_parameter_value(VCG_MECHANISM, v, 30)
+    vcg_sw_mean.append(summary_result[0])
+    vcg_sw_std.append(summary_result[1])
+    vcg_dp_mean.append(summary_result[2])
+    vcg_dp_std.append(summary_result[3])
+    vcg_pp_mean.append(summary_result[4])
+    vcg_pp_std.append(summary_result[5])
+    vcg_sr_mean.append(summary_result[6])
+    vcg_sr_std.append(summary_result[7])
+    vcg_rt_mean.append(summary_result[8])
+    vcg_rt_std.append(summary_result[9])
+
+
+# gm 数据
+gm_sw_mean, gm_sw_std = [], []
+gm_dp_mean, gm_dp_std = [], []
+gm_pp_mean, gm_pp_std = [], []
+gm_sr_mean, gm_sr_std = [], []
+gm_rt_mean, gm_rt_std = [], []
+for v in range(min_v, max_v, v_step):
+    summary_result = get_each_parameter_value(GM_MECHANISM, v, 30)
+    gm_sw_mean.append(summary_result[0])
+    gm_sw_std.append(summary_result[1])
+    gm_dp_mean.append(summary_result[2])
+    gm_dp_std.append(summary_result[3])
+    gm_pp_mean.append(summary_result[4])
+    gm_pp_std.append(summary_result[5])
+    gm_sr_mean.append(summary_result[6])
+    gm_sr_std.append(summary_result[7])
+    gm_rt_mean.append(summary_result[8])
+    gm_rt_std.append(summary_result[9])
+
+
+plot_bar_char2(vcg_sw_mean, gm_sw_mean, vcg_sw_std, gm_sw_std, "#vehilce", "social welfare", VCG_MECHANISM, GM_MECHANISM)
+plot_bar_char2(vcg_sr_mean, gm_sr_mean, vcg_sr_std, gm_sr_std, "#vehilce", "service ratio", VCG_MECHANISM, GM_MECHANISM)
+
+
 
 # sw1_mean, sw1_std = [], []
 # sw2_mean, sw2_std = [], []
