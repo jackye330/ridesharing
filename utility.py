@@ -112,6 +112,33 @@ def singleton(cls):
     return _func
 
 
+def load_bin_data(file_name: str):
+    s = file_name.split('.')
+    if s[-1] == "pkl":
+        with open(file_name, "rb") as file:
+            data = pickle.load(file)
+    elif s[-1] == "npy":
+        data = np.load(file_name)
+    elif s[-1] == "graphml":
+        import osmnx as ox
+        s = file_name.split("/")
+        data = ox.load_graphml(filename=s[-1], folder="/".join(s[:-1]))
+    else:
+        raise Exception("给定拓展名{0}，不知道如何处理".format(s[-1]))
+    return data
+
+
+def save_bin_data(file_name: str, data):
+    s = file_name.split('.')
+    if s[-1] == "pkl":
+        with open(file_name, "wb") as file:
+            pickle.dump(data, file)
+    elif s[-1] == "npy":
+        np.save(file_name, data)
+    else:
+        raise Exception("给定拓展名{0}，不知道如何处理".format(s[-1]))
+
+
 def fix_point_length_add(value1: float, value2: float):
     return np.round(float(Decimal(str(value1)) + Decimal(str(value2))), POINT_LENGTH)
 

@@ -36,6 +36,9 @@ class GeoLocation:
     def osm_index(self) -> int:
         return self._osm_index
 
+    def to_file_index(self) -> int:
+        return self._osm_index
+
 
 class OrderLocation(GeoLocation):
     __slots__ = ["_belong_order"]

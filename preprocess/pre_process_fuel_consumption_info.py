@@ -33,13 +33,13 @@ export_data = export_data[export_data["市区油耗"] != 0]
 export_data = export_data[export_data["综合油耗"] != 0]
 print(export_data.shape)
 
-# 添加座位信息
-export_data = export_data[export_data["fuel_consumption"] >= 4.1]
-n = export_data.shape[0]
-car_info = export_data.sort_values(by="pair_social_welfare")
-seats = np.zeros(shape=(n,), dtype=np.int8)
-car_info["seats"] = seats
-car_info["pair_social_welfare"].hist()
-plt.show()
-car_info.to_csv("./data/vehicle_data/fuel_consumption_and_seats.csv", index=False)
+# # 添加座位信息
+
+# n = export_data.shape[0]
+# car_info = export_data.sort_values(by="pair_social_welfare")
+# seats = np.zeros(shape=(n,), dtype=np.int8)
+# car_info["seats"] = seats
+# car_info["pair_social_welfare"].hist()
+# plt.show()
+# car_info.to_csv("./data/vehicle_data/fuel_consumption_and_seats.csv", index=False)
 

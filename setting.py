@@ -3,6 +3,7 @@
 # author : zlq16
 # date   : 2019/11/4
 import numpy as np
+import os
 
 # 将一些常数实现为单例，节约空间
 POINT_LENGTH = 2  # 计算小数点后面保留的精度
@@ -22,41 +23,44 @@ ROAD_MODE = "ROAD_MODE"
 GRID_MODE = "GRID_MODE"
 EXPERIMENTAL_MODE = ROAD_MODE
 # 一组参数实验的重复次数
-MAX_REPEATS = 10
+MAX_REPEATS = 1
 # 订单分配算法的执行时间间隔 单位 s. 如果是路网环境 [10 15 20 25 30], 如果是网格环境 默认为1.
-TIME_SLOT = 30
+TIME_SLOT = 15
 # 距离精度误差, 表示一个车辆到某一个点的距离小于这一个数, 那么就默认这个车已经到这个点上了 单位 m. 如果是实际的路网一般取10m, 如果是网格环境一般取0.
 DISTANCE_EPS = 10
 # 模拟一天的时刻最小值/最大值 单位 s.
 # 如果是路网环境 MIN_REQUEST_TIME <= request_time < MAX_REQUEST_TIME 并且有 MAX_REQUEST_TIME - MIN_REQUEST_TIME 并且可以整除 TIME_SLOT.
 # 如果是网格环境 MIN_REQUEST_TIME = 0, MIN_REQUEST_TIME = 500.
 MIN_REQUEST_TIME, MAX_REQUEST_TIME = 19 * 60 * 60, 20 * 60 * 60
-# 车辆空余位置的选择范围  TODO 这个以后可能会修改, 添加更多的选择
-N_SEATS = [4]
-# 实验环境中的车辆数目
-VEHICLE_NUMBER = 800
-# 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 (MILE_TO_KM * 25 / 3.6) m/s ≈ 10 m/s
-# 但是根据资料纽约市的车辆速度只有7.2mph ~ 9.1mph 约等于 4.0 m/s (http://mini.eastday.com/a/190331120732879.html)
-VEHICLE_SPEED = 4.0
 # 投标策略 "ADDITIONAL_COST" 以成本量的增加量作为投标 "ADDITIONAL_PROFIT" 以利润的增加量作为投标量
 ADDITIONAL_COST_STRATEGY = "ADDITIONAL_COST_STRATEGY"
 ADDITIONAL_PROFIT_STRATEGY = "ADDITIONAL_PROFIT_STRATEGY"
-BIDDING_STRATEGY = ADDITIONAL_COST_STRATEGY
+BIDDING_STRATEGY = ADDITIONAL_PROFIT_STRATEGY
 # 路线规划的目标 "MINIMIZE_COST" 最小化成本 "MAXIMIZE_PROFIT" 最大化利润
 MINIMIZE_COST = "MINIMIZE_COST"
 MAXIMIZE_PROFIT = "MAXIMIZE_PROFIT"
-ROUTE_PLANNING_GOAL = MINIMIZE_COST
+ROUTE_PLANNING_GOAL = MAXIMIZE_PROFIT
 # 路线规划的方案 "INSERTING" 新的订单起始点直接插入而不改变原有订单起始位置顺序  "RESCHEDULING" 原有订单的起始位置进行重排
 INSERTING = "INSERTING"
 RESCHEDULING = "RESCHEDULING"
-ROUTE_PLANNING_METHOD = INSERTING
+ROUTE_PLANNING_METHOD = RESCHEDULING
 # 平台使用的订单分发方式
 NEAREST_DISPATCHING = "NEAREST-DISPATCHING"  # 通用的最近车辆分配算法
 VCG_MECHANISM = "SWMOM-VCG"  # vcg 机制 这是一个简单的分配机制
 GM_MECHANISM = "SWMOM-GM"  # gm 机制 这是一个简单的分配机制
 SPARP_MECHANISM = "SPARP"  # SPARP 机制 这是一个通用分配机制
 SEQUENCE_AUCTION = "SWMOM-SASP"  # 贯序拍卖机制 这是一个通用分配机制
-DISPATCHING_METHOD = GM_MECHANISM
+DISPATCHING_METHOD = SPARP_MECHANISM
+
+# 车辆设定 ##########
+# 实验环境中的车辆数目
+VEHICLE_NUMBER = 800
+# 实验环境中的车辆速度 单位 m/s. 对于任意的环境 VEHICLE_SPEED * TIME_SLOT >> DISTANCE_EPS. 纽约市规定是 (MILE_TO_KM * 25 / 3.6) m/s ≈ 10 m/s
+# 但是根据资料纽约市的车辆速度只有7.2mph ~ 9.1mph 约等于 4.0 m/s (http://mini.eastday.com/a/190331120732879.html)
+VEHICLE_SPEED = 4.0
+# 车辆空余位置的选择范围  TODO 这个以后可能会修改, 添加更多的选择
+N_SEATS = [4]
+
 
 # 与 REAL 相关的配置 ###################################################################################################################################
 # 与地理相关的数据存放点
@@ -64,30 +68,29 @@ New_York = "New_York"
 Hai_Kou = "Hai_Kou"
 Manhattan = "Manhattan"
 GEO_NAME = Manhattan
-GEO_DATA_FILE = {
-    "base_folder": "../data/{0}/network_data".format(GEO_NAME),
-    "graph_file": "{0}.graphml".format(GEO_NAME),
-    "osm_id2index_file": "osm_id2index.pkl",
-    "index2osm_id_file": "index2osm_id.pkl",
-    "shortest_distance_file": "shortest_distance.npy",
-    "shortest_path_file": "shortest_path.npy",
-    "adjacent_index_file": "adjacent_index.pkl",
-    "access_index_file": "access_index.pkl",
-    "adjacent_location_osm_index_file": "{0}/adjacent_location_osm_index.pkl".format(TIME_SLOT),
-    "adjacent_location_driven_distance_file": "{0}/adjacent_location_driven_distance.pkl".format(TIME_SLOT),
-    "adjacent_location_goal_index_file": "{0}/adjacent_location_goal_index.pkl".format(TIME_SLOT),
-}
+GEO_BASE_FILE = "../data/{0}/network_data".format(GEO_NAME)
+GRAPH_DATA_FILE = "../raw_data/{0}_raw_data/{0}.graphml".format(GEO_NAME)
+OSM_ID2INDEX_FILE = os.path.join(GEO_BASE_FILE, "osm_id2index.pkl")
+INDEX2OSM_ID_FILE = os.path.join(GEO_BASE_FILE, "index2osm_id.pkl")
+SHORTEST_DISTANCE_FILE = os.path.join(GEO_BASE_FILE, "shortest_distance.npy")
+SHORTEST_PATH_FILE = os.path.join(GEO_BASE_FILE, "shortest_path.npy")
+ADJACENT_INDEX_FILE = os.path.join(GEO_BASE_FILE, "adjacent_index.pkl")
+ACCESS_INDEX_FILE = os.path.join(GEO_BASE_FILE, "access_index.pkl")
+ADJACENT_LOCATION_OSM_INDEX_FILE = os.path.join(GEO_BASE_FILE, "{0}/adjacent_location_osm_index.pkl".format(TIME_SLOT))
+ADJACENT_LOCATION_DRIVEN_DISTANCE_FILE = os.path.join(GEO_BASE_FILE, "{0}/adjacent_location_driven_distance.pkl".format(TIME_SLOT))
+ADJACENT_LOCATION_GOAL_INDEX_FILE = os.path.join(GEO_BASE_FILE, "{0}/adjacent_location_goal_index.pkl".format(TIME_SLOT))
+
 # 订单数据存放地址
-ORDER_DATA_FILES = {
-    "pick_region_model": "../data/{0}/order_data/pick_region_model.pkl".format(GEO_NAME),
-    "drop_region_model": "../data/{0}/order_data/drop_region_model.pkl".format(GEO_NAME),
-    "demand_model_file": "../data/{0}/order_data/demand_model.npy".format(GEO_NAME),
-    "demand_location_model_file": "../data/{0}/order_data/demand_location_model.npy".format(GEO_NAME),
-    "demand_transfer_model_file": "../data/{0}/order_data/demand_transfer_model.npy".format(GEO_NAME),
-    "unit_fare_model_file": "../data/{0}/order_data/unit_fare_model.npy".format(GEO_NAME),
-}
+ORDER_BASE_FILE = "../data/{0}/order_data".format(GEO_NAME)
+DEMAND_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "demand_model.npy")
+PICK_REGION_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "pick_region_model.pkl")
+DROP_REGION_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "drop_region_model.pkl")
+DEMAND_LOCATION_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "demand_location_model.npy")
+DEMAND_TRANSFER_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "demand_transfer_model.npy")
+UNIT_FARE_MODEL_FILE = os.path.join(ORDER_BASE_FILE, "unit_fare_model.npy")
+
 # 订单缩放比
-ORDER_NUMBER_RATIO = 0.5  # 就是实际生产出来的订单数目乘于一个比例
+ORDER_NUMBER_RATIO = 1.0  # 就是实际生产出来的订单数目乘于一个比例
 # 车辆油耗与座位数据存放地址
 FUEL_CONSUMPTION_DATA_FILE = "../data/vehicle_data/fuel_consumption_and_seats.csv"
 # 直接与此常数相乘可以得到单位距离的成本 $/m/(单位油耗)
@@ -102,16 +105,6 @@ WAIT_TIMES = [3 * 60, 4 * 60, 5 * 60, 6 * 60, 7 * 60, 8 * 60]
 GRAPH_SIZE = 100
 # 每一个网格的大小
 GRID_SIZE = 1.0
-# 每一个时间槽我们的订单数目我们按照正态分布生成
-MU, SIGMA = 100, 10
-# 订单的等待时间
-MIN_WAIT_TIME, MAX_WAIT_TIME = 10, 100
-# 车辆成本单位成本可选范围 每米司机要花费的钱
-UNIT_COSTS = [1.2, 1.3, 1.4, 1.5]
-# 订单的单位预先价格 每米乘客要花费的钱
-UNIT_FARE = 2.5
-# 订单的乘客数目
-MIN_N_RIDERS, MAX_N_RIDERS = 1, 2
 
 # 与环境创建相关的数据 #################################################################
 INPUT_VEHICLES_DATA_FILES = ["../data/input/vehicles_data/{0}_{1}_{2}_{3}_{4}.csv".format(EXPERIMENTAL_MODE, i, VEHICLE_NUMBER, MIN_REQUEST_TIME, MAX_REQUEST_TIME) for i in range(MAX_REPEATS)]

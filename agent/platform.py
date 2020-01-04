@@ -8,9 +8,50 @@ from agent.vehicle import Vehicle
 from algorithm.utility import Mechanism
 from env.network import Network
 from env.order import Order
+from env.location import OrderLocation, PickLocation
 from utility import singleton
+from setting import VEHICLE_SPEED
 
 __all__ = ["Platform"]
+
+
+def merge_orders(order1: Order, order2: Order, current_time: int, network: Network):
+    """
+    往order1的路线上插入order2路线
+    :param order1:
+    :param order2:
+    :param current_time:
+    :param network:
+    :return:
+    """
+    routes = [
+        [order1.pick_location, order2.pick_location, order1.drop_location, order2.drop_location],
+        [order1.pick_location, order2.pick_location, order2.drop_location, order1.drop_location],
+        [order1.pick_location, order1.drop_location, order2.pick_location, order2.drop_location]
+    ]
+    for route in routes:
+        temp_dist = 0
+        temp_pick_dist = dict()
+        for index, order_location in enumerate(route):
+            belong_order: Order = order_location.belong_order
+            if index == 0:
+                between_dist = 0.0
+            else:
+                between_dist = network.get_shortest_distance(route[index-1], route[index])
+
+            temp_dist += between_dist
+            if isinstance(order_location, PickLocation):
+                if network.is_smaller_bound_distance(temp_dist, (belong_order.request_time + belong_order.wait_time - current_time) * VEHICLE_SPEED):
+                    temp_pick_dist[belong_order] = temp_dist
+                else:
+                    break
+            else:
+                if not network.is_smaller_bound_distance(temp_dist - temp_pick_dist[belong_order], belong_order.detour_distance + belong_order.order_distance):
+                    break
+        else:
+            return True
+
+    return False
 
 
 @singleton
@@ -52,7 +93,7 @@ class Platform:
         :param network:  环境
         :return:
         """
-        #  收集订单
+        #  收集新的订单
         self.collect_orders(new_orders, current_time)
 
         # 匹配定价
@@ -66,6 +107,10 @@ class Platform:
         return self._order_pool
 
     @property
+    def vehicle_pool(self) -> Set[Vehicle]:
+        return self._vehicle_pool
+
+    @property
     def dispatching_mechanism(self) -> Mechanism:
         return self._dispatching_mechanism
 
@@ -75,3 +120,20 @@ class Platform:
         """
         self._order_pool.clear()  # 清空订单
         self._dispatching_mechanism.reset()  # 机制自动清空
+
+    @staticmethod
+    def merge_orders(new_orders: Set[Order], current_time: int, network: Network):
+        n: int = len(new_orders)
+        temp_orders = list(new_orders)
+        cnt = 0
+        for i in range(n):
+            for j in range(n):
+                if i != j and merge_orders(temp_orders[i], temp_orders[j], current_time, network):
+                    cnt += 1
+        print(cnt / (n * (n - 1)))
+
+    def get_current_vehicle_number(self):
+        return len(self._vehicle_pool)
+
+    def get_current_order_number(self):
+        return len(self._order_pool)

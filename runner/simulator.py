@@ -5,7 +5,7 @@
 from typing import List, NoReturn, Set
 from agent.platform import Platform
 from agent.proxy_bidder import AdditionalProfitBidder, AdditionalCostBidder
-from agent.vehicle import Vehicle, generate_road_vehicles_data, generate_grid_vehicles_data
+from agent.vehicle import Vehicle
 from algorithm.generic_dispatching.auction import second_price_sequence_auction
 from algorithm.generic_dispatching.baseline import sparp_mechanism, nearest_vehicle_dispatching
 from algorithm.simple_dispatching.auction import vcg_mechanism, greedy_mechanism
@@ -13,11 +13,11 @@ from algorithm.route_planning.planner import InsertingPlanner, ReschedulingPlann
 from setting import INSERTING, RESCHEDULING, VEHICLE_SPEED
 from setting import MINIMIZE_COST, MAXIMIZE_PROFIT
 from setting import ROAD_MODE, GRID_MODE, ADDITIONAL_COST_STRATEGY, ADDITIONAL_PROFIT_STRATEGY, NEAREST_DISPATCHING, VCG_MECHANISM, GM_MECHANISM, SPARP_MECHANISM, SEQUENCE_AUCTION
-from env.graph import BaseGraph, generate_grid_graph, generate_road_graph
-from env.order import Order, generate_road_orders_data, generate_grid_orders_data
+from runner.create_env_file import create_network
+from env.order import Order
 from env.network import Network
 from setting import BIDDING_STRATEGY, DISPATCHING_METHOD, EXPERIMENTAL_MODE, ROUTE_PLANNING_GOAL
-from setting import TIME_SLOT, VEHICLE_NUMBER, MIN_REQUEST_TIME, INT_ZERO
+from setting import TIME_SLOT, MIN_REQUEST_TIME, INT_ZERO
 
 
 class Simulator:
@@ -34,16 +34,7 @@ class Simulator:
     ]
 
     def __init__(self):
-        if EXPERIMENTAL_MODE == ROAD_MODE:
-            BaseGraph.set_generate_graph_function(generate_road_graph)
-            Vehicle.set_generate_vehicles_function(generate_road_vehicles_data)
-            Order.set_order_generator(generate_road_orders_data)
-        elif EXPERIMENTAL_MODE == GRID_MODE:
-            BaseGraph.set_generate_graph_function(generate_grid_graph)
-            Vehicle.set_generate_vehicles_function(generate_grid_vehicles_data)
-            Order.set_order_generator(generate_grid_orders_data)
-        else:
-            raise Exception("目前还没有实现其实验模式")
+        network = create_network()
 
         if DISPATCHING_METHOD == VCG_MECHANISM:
             mechanism = vcg_mechanism
@@ -57,8 +48,6 @@ class Simulator:
             mechanism = nearest_vehicle_dispatching
         else:
             raise Exception("目前还没有实现其他类型的订单分配机制")
-
-        network = Network(BaseGraph.generate_graph())
         platform = Platform(mechanism)
 
         # 初始化模拟器的变量
@@ -91,18 +80,6 @@ class Simulator:
         self.each_vehicles_random_distance = list()
         self.bidding_time_trend = list()
         self.running_time_trend = list()
-
-    def create_vehicle_env(self, vehicles_data_save_file):
-        """
-        用于创造车辆环境
-        """
-        Vehicle.generate_vehicles_data(VEHICLE_NUMBER, self.network, vehicles_data_save_file)
-
-    def create_order_env(self, orders_data_save_file):
-        """
-        用于创造订单环境
-        """
-        Order.generate_orders_data(orders_data_save_file, self.network)
 
     def load_env(self, vehicles_data_file, orders_data_file):
         """
@@ -197,7 +174,6 @@ class Simulator:
 
     def simulate(self):
         for current_time, new_orders in self.orders:  # orders 是一个生成器
-            self.current_time = current_time
             self.platform.round_based_process(self.vehicles, new_orders, self.current_time, self.network)  # 订单分发和司机定价
             self.trace_vehicles_info()  # 车辆更新信息
             self.summary_each_round_result(new_orders)  # 统计匹配结果
@@ -228,7 +204,6 @@ class Simulator:
         total_vehicle_number = INT_ZERO
         for vehicle in self.vehicles:
             if not vehicle.is_activated:
-                # vehicle.enter_platform()  # TODO 日后去解决这个问题
                 continue
             total_vehicle_number += 1
             if vehicle not in mechanism.dispatched_vehicles and not vehicle.have_service_mission:
@@ -250,7 +225,6 @@ class Simulator:
 
                 if print_vehicle:
                     print(vehicle)
-            # vehicle.leave_platform()  # TODO 日后去解决这个问题
         self.empty_vehicle_number_trend.append(empty_vehicle_number)
         self.total_vehicle_number_trend.append(total_vehicle_number)
         self.empty_vehicle_ratio_trend.append(empty_vehicle_number / total_vehicle_number)
@@ -276,6 +250,14 @@ class Simulator:
                 raise Exception("有这么长订单路线吗")
         self.accumulate_service_distance_trend.append(sum([vehicle.service_driven_distance for vehicle in self.vehicles if vehicle.is_activated]))
         self.accumulate_random_distance_trend.append(sum([vehicle.random_driven_distance for vehicle in self.vehicles if vehicle.is_activated]))
+
+        # data = []
+        # import pickle
+        # for vehicle in self.vehicles:
+        #     each_data = [vehicle.vehicle_id, vehicle.unit_cost, vehicle.available_seats, vehicle.earn_profit, vehicle.earn_reward, vehicle.finish_orders_number, vehicle.service_driven_distance, vehicle.random_driven_distance]
+        #     data.append(each_data)
+        # with open("../test/data.pkl", "wb") as file:
+        #     pickle.dump(data, file)
 
     def summary_each_round_result(self, new_orders: Set[Order]) -> NoReturn:
         """

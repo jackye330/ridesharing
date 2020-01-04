@@ -2,18 +2,21 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/2/21
-import os
-import pickle
 import array
+import os
+
 import networkx as nx
 import numpy as np
-import osmnx as ox
-from setting import GEO_NAME
-from setting import TIME_SLOT
+
 from setting import DISTANCE_EPS, VEHICLE_SPEED
-from setting import GEO_DATA_FILE
-from utility import print_execute_time
+from setting import GEO_BASE_FILE
+from setting import GRAPH_DATA_FILE, OSM_ID2INDEX_FILE, INDEX2OSM_ID_FILE
+from setting import SHORTEST_DISTANCE_FILE, SHORTEST_PATH_FILE, ACCESS_INDEX_FILE, ADJACENT_INDEX_FILE
+from setting import ADJACENT_LOCATION_DRIVEN_DISTANCE_FILE, ADJACENT_LOCATION_OSM_INDEX_FILE, ADJACENT_LOCATION_GOAL_INDEX_FILE
+from setting import TIME_SLOT
 from utility import is_enough_small
+from utility import print_execute_time
+from utility import save_bin_data, load_bin_data
 
 
 @print_execute_time
@@ -43,7 +46,7 @@ def compute_shortest_distance():
             index_j = osm_id2index[osm_id_j]
             shortest_distance[index_i, index_j] = np.round(distance)
         print(index_i)
-    np.save(shortest_distance_file, shortest_distance)
+    save_bin_data(os.path.join("..", SHORTEST_DISTANCE_FILE), shortest_distance)
 
 
 @print_execute_time
@@ -53,7 +56,7 @@ def compute_shortest_path():
     1. shortest_distance[i, j] == 0.0, shortest_path[i, j] = -1;
     2. shortest_distance[i, j] == np.inf, shortest_path[i, j] = -2;
     """
-    shortest_distance = np.load(shortest_distance_file)
+    shortest_distance = load_bin_data(os.path.join("..", SHORTEST_DISTANCE_FILE))
     shortest_path = np.ones(shape=(node_number, node_number), dtype=np.int16) * -2
     access_index = [array.array('h') for _ in range(node_number)]  # 可以到达的节点
     adjacent_index = [array.array('h') for _ in range(node_number)]  # 周围相邻的节点
@@ -78,11 +81,9 @@ def compute_shortest_path():
         for j in s_adjacent_index:
             adjacent_index[index_i].append(j)
         print(index_i)
-    np.save(shortest_path_file, shortest_path)
-    with open(access_index_file, "wb") as file1:
-        pickle.dump(access_index, file1)
-    with open(adjacent_index_file, "wb") as file2:
-        pickle.dump(adjacent_index, file2)
+    save_bin_data(os.path.join("..", SHORTEST_PATH_FILE), shortest_path)
+    save_bin_data(os.path.join("..", ACCESS_INDEX_FILE), access_index)
+    save_bin_data(os.path.join("..", ADJACENT_INDEX_FILE), adjacent_index)
 
 
 @print_execute_time
@@ -91,13 +92,13 @@ def compute_shortest_path_time_slot():
     这些文件用于车辆随机更新
     :return:
     """
-    shortest_distance = np.load(shortest_distance_file)
+    shortest_distance = load_bin_data(SHORTEST_DISTANCE_FILE)
     adjacent_location_osm_index = [array.array('h') for _ in range(node_number)]  # 一个时间间隔可以到达的节点
     adjacent_location_driven_distance = [array.array('f') for _ in range(node_number)]  # 一个时间间隔到达某一个节点之后还多行驶的一段距离
     adjacent_location_goal_index = [array.array('h') for _ in range(node_number)]  # 一个时间间隔到达某一个节点之后多行驶朝向方向
 
-    if not os.path.exists(base_file+"/{0}".format(TIME_SLOT)):
-        os.mkdir(base_file+"/{0}".format(TIME_SLOT))
+    if not os.path.exists(GEO_BASE_FILE + "/{0}".format(TIME_SLOT)):
+        os.mkdir(GEO_BASE_FILE + "/{0}".format(TIME_SLOT))
 
     for paths in nx.all_pairs_dijkstra_path(di_graph, weight="length"):
         index_i = osm_id2index[paths[0]]
@@ -128,47 +129,28 @@ def compute_shortest_path_time_slot():
                     adjacent_location_goal_index[index_i].append(cur_path_index)
                     break
         print(index_i)
-    with open(adjacent_location_osm_index_file, "wb") as file3:
-        pickle.dump(adjacent_location_osm_index, file3)
-    with open(adjacent_location_driven_distance_file, "wb") as file4:
-        pickle.dump(adjacent_location_driven_distance, file4)
-    with open(adjacent_location_goal_index_file, "wb") as file5:
-        pickle.dump(adjacent_location_goal_index, file5)
+    save_bin_data(os.path.join("..", ADJACENT_LOCATION_OSM_INDEX_FILE), adjacent_location_osm_index)
+    save_bin_data(os.path.join("..", ADJACENT_LOCATION_DRIVEN_DISTANCE_FILE), adjacent_location_driven_distance)
+    save_bin_data(os.path.join("..", ADJACENT_LOCATION_GOAL_INDEX_FILE), adjacent_location_goal_index)
 
 
 if __name__ == '__main__':
     could_drive_distance = np.round(VEHICLE_SPEED * TIME_SLOT)  # 车辆在一个时间间隔内可以行驶的距离
-    base_file = "../../data/{0}/network_data/".format(GEO_NAME)
-    graph_file = GEO_DATA_FILE["graph_file"]
-    osm_id2index_file = os.path.join(base_file, GEO_DATA_FILE["osm_id2index_file"])
-    index2osm_id_file = os.path.join(base_file, GEO_DATA_FILE["index2osm_id_file"])
-    shortest_distance_file = os.path.join(base_file, GEO_DATA_FILE["shortest_distance_file"])
-    shortest_path_file = os.path.join(base_file, GEO_DATA_FILE["shortest_path_file"])
-    access_index_file = os.path.join(base_file, GEO_DATA_FILE["access_index_file"])
-    adjacent_index_file = os.path.join(base_file, GEO_DATA_FILE["adjacent_index_file"])
-    adjacent_location_osm_index_file = os.path.join(base_file, GEO_DATA_FILE["adjacent_location_osm_index_file"])
-    adjacent_location_driven_distance_file = os.path.join(base_file, GEO_DATA_FILE["adjacent_location_driven_distance_file"])
-    adjacent_location_goal_index_file = os.path.join(base_file, GEO_DATA_FILE["adjacent_location_goal_index_file"])
 
     # load raw data
-    graph = ox.load_graphml(filename=graph_file, folder="../raw_data/{0}_raw_data/".format(GEO_NAME))
+    graph = load_bin_data(GRAPH_DATA_FILE)
 
     # osm_id2index = {}
     # index2osm_id = {}
     # for i, osm_id in enumerate(graph.nodes):
     #     osm_id2index[osm_id] = i
     #     index2osm_id[i] = osm_id
-    #
-    # with open(index2osm_id_file, "wb") as file:
-    #     pickle.dump(index2osm_id, file)
-    #
-    # with open(osm_id2index_file, "wb") as file:
-    #     pickle.dump(osm_id2index, file)
 
-    with open(osm_id2index_file, "rb") as file:
-        osm_id2index = pickle.load(file)
-    with open(index2osm_id_file, "rb") as file:
-        index2osm_id = pickle.load(file)
+    # save_bin_data(os.path.join("..", OSM_ID2INDEX_FILE), osm_id2index)
+    # save_bin_data(os.path.join("..", INDEX2OSM_ID_FILE), index2osm_id)
+
+    osm_id2index = load_bin_data(os.path.join("..", OSM_ID2INDEX_FILE))
+    index2osm_id = load_bin_data(os.path.join("..", INDEX2OSM_ID_FILE))
     node_number = len(osm_id2index)
     di_graph = create_multi_di_graph()
     # 计算最短路径长度矩阵

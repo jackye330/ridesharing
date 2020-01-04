@@ -2,21 +2,27 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/22
+"""
+车辆可以被分为两类
+第1类：
+    出租车，这一类车辆是没有固定的目的地和结束时间
+第2类：
+    私家车，这一类车辆是一种固定的目的地和结束时间的车辆
+"""
 from typing import List, NoReturn, Dict, Set
-import numpy as np
 import pandas as pd
 
 from agent.proxy_bidder import ProxyBidder
 from algorithm.route_planning.planner import RoutePlanner
 from algorithm.route_planning.utility import PlanningResult
 from agent.utility import OrderBid, VehicleType
-from setting import FIRST_INDEX, FLOAT_ZERO, INT_ZERO, VEHICLE_FUEL_COST_RATIO
+from setting import FIRST_INDEX, FLOAT_ZERO, INT_ZERO
 from env.location import DropLocation, PickLocation, VehicleLocation, OrderLocation
 from env.network import Network
 from env.order import Order
 from utility import fix_point_length_add
 
-__all__ = ["Vehicle", "generate_grid_vehicles_data", "generate_road_vehicles_data"]
+__all__ = ["Vehicle"]
 
 
 class Vehicle:
@@ -32,7 +38,6 @@ class Vehicle:
     is_activated: 车辆是否已经激活
     """
     __slots__ = ["_vehicle_id", "_is_activated", "_route",  "_vehicle_type", "_finish_orders_number", "_earn_reward", "_earn_payoff"]
-    generate_vehicles_function = None  # 车辆生成函数
     proxy_bidder: ProxyBidder = None  # 车辆的代理投标者
     route_planner: RoutePlanner = None  # 车辆的路线规划器
 
@@ -66,48 +71,6 @@ class Vehicle:
     @classmethod
     def set_route_planner(cls, route_planner: RoutePlanner) -> NoReturn:
         cls.route_planner = route_planner
-
-    @classmethod
-    def set_generate_vehicles_function(cls, function) -> NoReturn:
-        cls.generate_vehicles_function = function
-
-    @classmethod
-    def generate_vehicles_data(cls, vehicle_number: int, network: Network, output_file: str):
-        """
-        用于生成用于模拟的文件，用于
-        :param vehicle_number:
-        :param network:
-        :param output_file:
-        :return:
-        """
-        locations = network.generate_random_locations(vehicle_number, VehicleLocation)  # 得到车辆位置
-        with open(output_file, "w") as file:
-            file.write("location_index,seats,unit_cost\n")
-            for line in cls.generate_vehicles_function(locations, vehicle_number):  # 得到很多的车辆类
-                file.write(",".join(map(str, line)) + "\n")
-
-    @classmethod
-    def load_vehicles_data(cls, vehicle_speed: float, time_slot: int, proxy_bidder: ProxyBidder, route_planner: RoutePlanner, input_file) -> List:
-        """
-        用于导入已经生成的车辆数据，并加工用于模拟
-        :param vehicle_speed: 车辆速度
-        :param time_slot: 表示
-        :param proxy_bidder: 代理投标者
-        :param route_planner: 路线规划器
-        :param input_file: 路网
-        :return:
-        """
-        cls.set_vehicle_speed(vehicle_speed)  # 初初始化车辆速度
-        cls.set_could_drive_distance(vehicle_speed * time_slot)  # 初始化车辆的行驶
-        cls.set_proxy_bidder(proxy_bidder)
-        cls.set_route_planner(route_planner)
-        vehicle_raw_data = pd.read_csv(input_file)
-        vehicle_number = vehicle_raw_data.shape[0]
-        vehicles = []
-        for vehicle_id in range(vehicle_number):
-            each_vehicle_data = vehicle_raw_data.iloc[vehicle_id, :]
-            vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), each_vehicle_data["seats"], each_vehicle_data["unit_cost"]))
-        return vehicles
 
     @property
     def assigned_order_number(self) -> int:
@@ -294,22 +257,6 @@ class Vehicle:
     def increase_random_distance(self, additional_distance: float) -> NoReturn:
         self._vehicle_type.random_driven_distance += additional_distance
 
-    def enter_platform(self) -> NoReturn:
-        """
-        当车辆是没有激活的状态的时候，按照一定概率进入平台
-        :return:
-        """
-        # TODO 日后补这个函数，车辆可能还会休息一段时间之后进入平台
-        pass
-
-    def leave_platform(self) -> NoReturn:
-        """
-        按照一定概率离开平台
-        :return:
-        """
-        # TODO 日后补这个函数, 车俩可能只是在某一个时间端进行工作
-        pass
-
     def __repr__(self):
         return "id: {0} location: {1} available_seats: {2} unit_cost: {3} route: {4}". \
             format(self.vehicle_id, self.location, self.available_seats, self.unit_cost, self.route)
@@ -322,20 +269,25 @@ class Vehicle:
             raise Exception("{0} is not {1}".format(other.__class__, self.__class__))
         return isinstance(other, self.__class__) and self.vehicle_id == other.vehicle_id
 
-
-def generate_road_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
-    from setting import FUEL_CONSUMPTION_DATA_FILE
-    from setting import N_SEATS
-    car_fuel_consumption_info = pd.read_csv(FUEL_CONSUMPTION_DATA_FILE)
-    cars_info = car_fuel_consumption_info.sample(n=vehicle_number)
-    unit_cost_info = cars_info["fuel_consumption"].values.astype(np.float) * VEHICLE_FUEL_COST_RATIO
-    seats = np.random.choice(N_SEATS)
-    return [(locations[vehicle_id].osm_index, seats, unit_cost_info[vehicle_id]) for vehicle_id in range(vehicle_number)]
-
-
-def generate_grid_vehicles_data(locations: List[VehicleLocation], vehicle_number: int) -> List:
-    from setting import UNIT_COSTS
-    from setting import N_SEATS
-    unit_costs = np.random.choice(UNIT_COSTS, size=(vehicle_number,))
-    seats = np.random.choice(N_SEATS)
-    return [(locations[vehicle_id].osm_index, seats, unit_costs[vehicle_id]) for vehicle_id in range(vehicle_number)]
+    @classmethod
+    def load_vehicles_data(cls, vehicle_speed: float, time_slot: int, proxy_bidder: ProxyBidder, route_planner: RoutePlanner, input_file) -> List:
+        """
+        用于导入已经生成的车辆数据，并加工用于模拟
+        :param vehicle_speed: 车辆速度
+        :param time_slot: 表示
+        :param proxy_bidder: 代理投标者
+        :param route_planner: 路线规划器
+        :param input_file: 路网
+        :return:
+        """
+        cls.set_vehicle_speed(vehicle_speed)  # 初初始化车辆速度
+        cls.set_could_drive_distance(vehicle_speed * time_slot)  # 初始化车辆的行驶
+        cls.set_proxy_bidder(proxy_bidder)
+        cls.set_route_planner(route_planner)
+        vehicle_raw_data = pd.read_csv(input_file)
+        vehicle_number = vehicle_raw_data.shape[0]
+        vehicles = []
+        for vehicle_id in range(vehicle_number):
+            each_vehicle_data = vehicle_raw_data.iloc[vehicle_id, :]
+            vehicles.append(cls(vehicle_id, VehicleLocation(int(each_vehicle_data["location_index"])), each_vehicle_data["seats"], each_vehicle_data["unit_cost"]))
+        return vehicles

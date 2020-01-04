@@ -17,11 +17,11 @@ def create_vehicles(_simulator: Simulator):
 
 
 def run_simulation(_simulator: Simulator):
-    for epoch in range(MAX_REPEATS):
+    for epoch in range(1):
         _simulator.reset()  # 这一步很重要一定要做
         _simulator.load_env(INPUT_VEHICLES_DATA_FILES[epoch], INPUT_ORDERS_DATA_FILES[epoch])
         _simulator.simulate()
-        _simulator.save_simulate_result(SAVE_RESULT_FILES[epoch])
+        # _simulator.save_simulate_result(SAVE_RESULT_FILES[epoch])
 
 
 if __name__ == '__main__':

@@ -2,18 +2,17 @@
 # -*- coding:utf-8 -*-
 # author : zlq16
 # date   : 2019/10/22
+"""
+TODO 本文之探讨只有一个乘客订单的情况, 后续可能要加入多个乘客的情况
+"""
 from typing import Set
 
-import numpy as np
 import pandas as pd
 
 from env.location import PickLocation, DropLocation
-from env.network import Network
-from setting import POINT_LENGTH
-from preprocess.utility import RegionModel
-from setting import FLOAT_ZERO, DETOUR_RATIOS, WAIT_TIMES, INT_ZERO
+from setting import FLOAT_ZERO, INT_ZERO
 
-__all__ = ["Order", "generate_road_orders_data", "generate_grid_orders_data"]
+__all__ = ["Order"]
 
 
 class Order:
@@ -51,7 +50,7 @@ class Order:
 
     order_generator = None  # 设置订单生成器
 
-    def __init__(self, order_id: int, pick_location: PickLocation, drop_location: DropLocation, request_time: int, wait_time: int, order_distance: float, order_fare: float, detour_ratio: float, n_riders: int):
+    def __init__(self, order_id: int, pick_location: PickLocation, drop_location: DropLocation, request_time: int, wait_time: int, order_distance: float, order_fare: float, detour_ratio: float, n_riders=1):
         self._order_id: int = order_id
         self._pick_location: PickLocation = pick_location
         self._pick_location.set_belong_order(self)  # 反向设置，方便定位
@@ -73,20 +72,6 @@ class Order:
         self._real_detour_ratio: float = FLOAT_ZERO  # 实际绕路比例
 
     @classmethod
-    def set_order_generator(cls, generator):
-        cls.order_generator = generator
-
-    @classmethod
-    def generate_orders_data(cls, output_file: str, network: Network):
-        """
-        将原始数据生成一个csv文件
-        :param output_file: csv输出文件
-        :param network: 网络
-        :return:
-        """
-        cls.order_generator(output_file, network)
-
-    @classmethod
     def load_orders_data(cls, start_time: int, time_slot: int, input_file: str):
         """
         从输入的csv文件中读取订单文件并逐个返回到外界
@@ -101,7 +86,7 @@ class Order:
         each_time_slot_orders: Set[Order] = set()
         for csv_iterator in pd.read_table(input_file, chunksize=chunk_size, iterator=True):  # 这么弄主要是为了防止order_data过大
             for line in csv_iterator.values:
-                # ["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]
+                # ["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio"]
                 each_order_data = line[0].split(',')
                 request_time = int(each_order_data[0])
                 wait_time = int(each_order_data[1])
@@ -110,7 +95,6 @@ class Order:
                 order_distance = float(each_order_data[4])
                 order_fare = float(each_order_data[5])
                 detour_ratio = float(each_order_data[6])
-                n_riders = int(each_order_data[7])
                 order = cls(
                     order_id=order_id,
                     pick_location=PickLocation(pick_index),
@@ -120,7 +104,6 @@ class Order:
                     order_distance=order_distance,
                     order_fare=order_fare,
                     detour_ratio=detour_ratio,
-                    n_riders=n_riders,
                 )
                 if request_time < current_time + time_slot:
                     each_time_slot_orders.add(order)
@@ -224,120 +207,3 @@ class Order:
         self._real_order_distance = drop_off_distance - self._pick_up_distance
         self._real_detour_ratio = self._real_order_distance / self._order_distance - 1.0
         self._real_service_time = real_finish_time - self._request_time - self._real_wait_time  # 这个订单被完成花费的时间
-
-
-def generate_real_road_orders_data(output_file, *args, **kwargs):
-    """
-    实际路网环境中的订单生成和时间流逝
-    :return:
-    """
-    # 这个是由真实的订单数据的生成需要的结果
-    from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
-    shortest_distance = np.load("../data/Manhattan/network_data/shortest_distance.npy")
-    order_data = pd.read_csv("../preprocess/raw_data/temp/Manhattan/order_data_{0:03d}.csv".format(0))
-    order_data = order_data[(MIN_REQUEST_TIME <= order_data.pick_time) & (order_data.pick_time < MAX_REQUEST_TIME)]
-    order_data = order_data[shortest_distance[order_data.pick_index, order_data.drop_index] != np.inf]
-    order_data = order_data[shortest_distance[order_data.pick_index, order_data.drop_index] >= 1000.0]  # 过于短的或者订单的距离是无穷大
-    order_data["wait_time"] = np.random.choice(WAIT_TIMES, size=order_data.shape[0])
-    order_data["order_distance"] = shortest_distance[order_data.pick_index, order_data.drop_index]
-    order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=order_data.shape[0])
-    order_data["n_riders"] = np.where(order_data.n_riders < 2, 1, 2)  # TODO 这一步是为了能保证2的上限, 以后可能需要修改
-    order_data.drop(columns=["order_tip", "total_fare"], axis=1, inplace=True)
-    order_data = order_data.rename(columns={'pick_time': 'request_time'})
-    order_data["request_time"] = order_data["request_time"].values.astype(np.int32)
-    order_data["order_fare"] = np.round(order_data["order_fare"].values, POINT_LENGTH)
-    order_data = order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
-    order_data.to_csv(output_file, index=False)
-
-
-def generate_vir_road_orders_data(output_file: str, *args, **kwargs):
-    # 这个是将30天的数据合并之后的结果
-    from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME, ORDER_NUMBER_RATIO
-    from setting import ORDER_DATA_FILES
-    from setting import MILE_TO_M
-    import pickle
-    with open(ORDER_DATA_FILES["pick_region_model"], "rb") as file:
-        pick_region_model: RegionModel = pickle.load(file)
-    with open(ORDER_DATA_FILES["drop_region_model"], "rb") as file:
-        drop_region_model: RegionModel = pickle.load(file)
-    shortest_distance = np.load("../data/Manhattan/network_data/shortest_distance.npy")
-    unit_fare_model = np.load(ORDER_DATA_FILES["unit_fare_model_file"])
-    demand_model = np.load(ORDER_DATA_FILES["demand_model_file"])
-    demand_location_model = np.load(ORDER_DATA_FILES["demand_location_model_file"])
-    demand_transfer_model = np.load(ORDER_DATA_FILES["demand_transfer_model_file"])
-    st_time_bin = MIN_REQUEST_TIME // 3600  # MIN_REQUEST_TIME 落在了哪一个时间区间上
-    en_time_bin = (MAX_REQUEST_TIME - 1) // 3600  # MAX_REQUEST_TIME 落在了哪一个时间区间上
-    # 第一个时间区域还需要生成的时间
-    data_series = []
-    for time_bin in range(st_time_bin, en_time_bin + 1):
-        if st_time_bin == en_time_bin:  # 在同一个时间区间上
-            demand_number = demand_model[time_bin] * (MAX_REQUEST_TIME - MIN_REQUEST_TIME) / 3600
-        elif time_bin == st_time_bin:
-            demand_number = demand_model[time_bin] * ((st_time_bin + 1) * 3600 - MIN_REQUEST_TIME) / 3600
-        elif time_bin == en_time_bin:
-            demand_number = demand_model[time_bin] * (MAX_REQUEST_TIME - en_time_bin * 3600) / 3600
-        else:
-            demand_number = demand_model[time_bin]
-        demand_number = demand_number * ORDER_NUMBER_RATIO
-        demand_prob_location = demand_location_model[time_bin]
-        demand_prob_transfer = demand_transfer_model[time_bin]
-        demand_number_of_each_transfer = np.zeros(shape=demand_prob_transfer.shape, dtype=np.int32)
-        for i in range(demand_prob_transfer.shape[0]):
-            demand_number_of_each_transfer[i] = np.round(demand_prob_location[i] * demand_prob_transfer[i] * demand_number, 0)
-        for i in range(demand_number_of_each_transfer.shape[0]):
-            for j in range(demand_number_of_each_transfer.shape[1]):
-                d_n_of_t = demand_number_of_each_transfer[i, j]
-                temp_order_data = pd.DataFrame()
-                temp_order_data["request_time"] = np.random.randint(MIN_REQUEST_TIME, MAX_REQUEST_TIME, size=d_n_of_t)
-                temp_order_data["wait_time"] = np.random.choice(WAIT_TIMES, size=d_n_of_t)
-                temp_order_data["pick_index"] = np.array([pick_region_model.get_rand_index_by_region_id(i) for _ in range(d_n_of_t)], dtype=np.int16)
-                temp_order_data["drop_index"] = np.array([drop_region_model.get_rand_index_by_region_id(j) for _ in range(d_n_of_t)], dtype=np.int16)
-                temp_order_data["order_distance"] = shortest_distance[temp_order_data.pick_index.values, temp_order_data.drop_index.values]
-                temp_order_data["order_fare"] = np.round(temp_order_data["order_distance"] * unit_fare_model[time_bin] / MILE_TO_M, POINT_LENGTH)
-                temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=d_n_of_t)
-                temp_order_data["n_riders"] = np.ones(shape=d_n_of_t, dtype=np.int8)
-                temp_order_data = temp_order_data[(temp_order_data["order_distance"] != np.inf) & (temp_order_data["order_distance"] >= 1000.0)]
-                temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
-                data_series.append(temp_order_data)
-    order_data: pd.DataFrame = pd.concat(data_series, axis=0, ignore_index=True)
-    order_data = order_data.sort_values(by="request_time", axis=0, ascending=True)
-    order_data.to_csv(output_file, index=False)
-
-
-def generate_road_orders_data(output_file: str, network: Network):
-    """
-    调用上面两类函数
-    """
-    generate_vir_road_orders_data(output_file, network)
-
-
-def generate_grid_orders_data(output_file, network: Network):
-    """
-    网格路网环境中的订单生成和时间流逝
-    我们生成订单的方式可以参考论文 An Online Mechanism for Ridesharing in Autonomous Mobility-on-Demand Systems (IJCAI2016)
-    """
-    from setting import MIN_REQUEST_TIME, MAX_REQUEST_TIME
-    from setting import MU, SIGMA
-    from setting import MIN_WAIT_TIME, MAX_WAIT_TIME
-    from setting import UNIT_FARE
-    from setting import MIN_N_RIDERS, MAX_N_RIDERS
-    from setting import DETOUR_RATIOS
-    order_series = []
-    for current_time in range(MIN_REQUEST_TIME, MAX_REQUEST_TIME):
-        order_number = int(np.random.normal(MU, SIGMA))
-        temp_order_data = pd.DataFrame()
-        temp_order_data["request_time"] = np.ones(shape=(order_number,), dtype=np.int32) * current_time
-        temp_order_data["wait_time"] = np.random.randint(MIN_WAIT_TIME, MAX_WAIT_TIME + 1, size=(order_number,))
-        pick_locations = network.generate_random_locations(order_number, PickLocation)
-        drop_locations = network.generate_random_locations(order_number, DropLocation)
-        temp_order_data["pick_index"] = np.array([location.osm_index for location in pick_locations])
-        temp_order_data["drop_index"] = np.array([location.osm_index for location in drop_locations])
-        temp_order_data["order_distance"] = np.array([network.get_shortest_distance(pick_locations[idx], drop_locations[idx]) for idx in range(order_number)])
-        temp_order_data["order_fare"] = np.round(temp_order_data.order_distance * UNIT_FARE, POINT_LENGTH)
-        temp_order_data["detour_ratio"] = np.random.choice(DETOUR_RATIOS, size=(order_number,))
-        temp_order_data["n_riders"] = np.random.randint(MIN_N_RIDERS, MAX_N_RIDERS + 1, size=(order_number,))
-        temp_order_data = temp_order_data[temp_order_data.pick_index != temp_order_data.drop_index]
-        temp_order_data = temp_order_data[["request_time", "wait_time", "pick_index", "drop_index", "order_distance", "order_fare", "detour_ratio", "n_riders"]]
-        order_series.append(temp_order_data)
-    order_data = pd.concat(order_series, axis=0, ignore_index=True)
-    order_data.to_csv(output_file, index=False)

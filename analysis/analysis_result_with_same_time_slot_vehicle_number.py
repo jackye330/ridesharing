@@ -19,7 +19,7 @@ label_font_size = 16
 n_sample = 10
 index2metric = pd.read_csv("index2metric.csv")
 model_names = [VCG_MECHANISM, GM_MECHANISM]
-min_v, max_v, v_step = 800, 1201, 200
+min_v, max_v, v_step = 800, 1801, 200
 
 
 def plot_bar_char2(y1_mean, y2_mean, y1_std, y2_std, x_str, y_str, model_1, model_2):
@@ -64,8 +64,7 @@ vcg_pp_mean, vcg_pp_std = [], []
 vcg_sr_mean, vcg_sr_std = [], []
 vcg_rt_mean, vcg_rt_std = [], []
 for v in range(min_v, max_v, v_step):
-    print(v)
-    summary_result = get_each_parameter_value(VCG_MECHANISM, v, 30)
+    summary_result = get_each_parameter_value(VCG_MECHANISM, v, 15)
     vcg_sw_mean.append(summary_result[0])
     vcg_sw_std.append(summary_result[1])
     vcg_dp_mean.append(summary_result[2])
@@ -85,7 +84,7 @@ gm_pp_mean, gm_pp_std = [], []
 gm_sr_mean, gm_sr_std = [], []
 gm_rt_mean, gm_rt_std = [], []
 for v in range(min_v, max_v, v_step):
-    summary_result = get_each_parameter_value(GM_MECHANISM, v, 30)
+    summary_result = get_each_parameter_value(GM_MECHANISM, v, 15)
     gm_sw_mean.append(summary_result[0])
     gm_sw_std.append(summary_result[1])
     gm_dp_mean.append(summary_result[2])

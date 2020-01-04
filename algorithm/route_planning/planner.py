@@ -3,7 +3,6 @@
 # author : zlq16
 # date   : 2019/11/7
 from typing import List, Dict
-import numpy as np
 from agent.utility import VehicleType
 from algorithm.route_planning.optimizer import Optimizer
 from algorithm.route_planning.utility import PlanningResult

@@ -13,7 +13,7 @@ from env.location import OrderLocation, VehicleLocation
 from utility import is_enough_small
 from utility import singleton
 
-__all__ = ["BaseGraph", "generate_grid_graph", "generate_road_graph"]
+__all__ = ["BaseGraph", "RoadGraph", "GridGraph"]
 
 
 class BaseGraph:
@@ -340,34 +340,3 @@ class GridGraph(BaseGraph):
                 real_drive_distance += self.move_to_target_index(vehicle_location, target_index, could_drive_distance)
 
         return np.round(real_drive_distance)
-
-
-def generate_road_graph() -> BaseGraph:
-    """
-    生成实际的图
-    :return:
-    """
-    import os
-    import pickle
-    from setting import GEO_DATA_FILE
-    geo_data_base_folder = GEO_DATA_FILE["base_folder"]
-    shortest_distance_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["shortest_distance_file"])
-    shortest_path_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["shortest_path_file"])
-    access_index_file = os.path.join(geo_data_base_folder, GEO_DATA_FILE["access_index_file"])
-
-    shortest_distance = np.load(shortest_distance_file)
-    shortest_path = np.load(shortest_path_file)
-    with open(access_index_file, "rb") as file:
-        access_index = pickle.load(file)
-
-    return RoadGraph(
-        shortest_distance=shortest_distance,
-        shortest_path=shortest_path,
-        access_index=access_index
-    )
-
-
-def generate_grid_graph() -> BaseGraph:
-    from setting import GRAPH_SIZE
-    from setting import GRID_SIZE
-    return GridGraph(graph_size=GRAPH_SIZE, grid_size=GRID_SIZE)
